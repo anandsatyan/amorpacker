@@ -134,15 +134,22 @@ async function fetchProductMetafields(productId) {
 
 // Helper function to generate HTML for line items
 async function generateLineItemHtml(item) {
+    console.log("hit");
+
   try {
     const productMetafields = await fetchProductMetafields(item.product_id);
     const packingListName = productMetafields.find(mf => mf.namespace === 'custom' && mf.key === 'packing_list_name')?.value || item.title;
+    let additionalInfo = '';
+    if (item.properties && item.properties.length > 0) {
+        additionalInfo = item.properties.map(prop => `${prop.value}`).join(', ');
+    }
+    let displayTitle = item.title.startsWith("Sample") ? additionalInfo : packingListName;
     const componentsMetafield = productMetafields.find(mf => mf.namespace === 'custom' && mf.key === 'components');
 
     let itemHtml = `
       <div class="flex-line-item">
         <div class="flex-line-item-description">
-          <p class="line-item-title"><input type="checkbox" />&nbsp;<strong>${packingListName}</strong></p>`;
+          <p class="line-item-title"><input type="checkbox" />&nbsp;<strong>${displayTitle}</strong></p>`;
         
   if (item.sku) {
     itemHtml += `<p class="line-item-sku">SKU: ${item.sku}</p>`;
@@ -203,6 +210,8 @@ app.get('/generate-packing-slip/:orderId', async (req, res) => {
         return date.toLocaleDateString('en-GB', options).replace(',', '');
       }
     const formattedDate = formatDate(order.created_at);
+    const shippingAddress = order.shipping_address || order.billing_address;
+
     let packingSlipHtml = `
       <html>
         <head>
@@ -240,12 +249,12 @@ app.get('/generate-packing-slip/:orderId', async (req, res) => {
                 <div class="shipping-address" style="width: 48%;">
                     <p class="subtitle-bold">Ship to</p>
                     <p class="address-detail">
-                    ${order.shipping_address.name}<br />
-                    ${order.shipping_address.company ? `${order.shipping_address.company}<br />` : ''}
-                    ${order.shipping_address.address1}, ${order.shipping_address.address2 || ''}<br />
-                    ${order.shipping_address.city}, ${order.shipping_address.province} ${order.shipping_address.zip}<br />
-                    <strong>${order.shipping_address.country}</strong><br />
-                    Phone: ${order.shipping_address.phone || ''}
+                    ${shippingAddress.name}<br />
+                    ${shippingAddress.company ? `${shippingAddress.company}<br />` : ''}
+                    ${shippingAddress.address1}, ${shippingAddress.address2 || ''}<br />
+                    ${shippingAddress.city}, ${shippingAddress.province} ${shippingAddress.zip}<br />
+                    <strong>${shippingAddress.country}</strong><br />
+                    Phone: ${shippingAddress.phone || ''}
                     </p>
                 </div>
 
