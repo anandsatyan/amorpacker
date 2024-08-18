@@ -1,5 +1,6 @@
 const express = require('express');
 const axios = require('axios');
+const path = require('path');  // Add this line to import the path module
 const app = express();
 require('dotenv').config();
 
@@ -16,6 +17,11 @@ app.listen(3000, () => {
 app.get('/', (req, res) => {
   res.send('Hello, Shopify!');
 });
+
+// Serve the robots.txt file
+app.use('/robots.txt', (req, res) => {
+    res.sendFile(path.join(__dirname, 'robots.txt'));
+  });
 
 // Fetch and display orders
 app.get('/orders', async (req, res) => {
