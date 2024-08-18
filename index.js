@@ -29,7 +29,7 @@ app.get('/orders', async (req, res) => {
     const orders = response.data.orders;
     let orderHtml = '<h1>Order List</h1><ul>';
     orders.forEach(order => {
-      orderHtml += `<li>${order.name} - ${order.total_price} <a href="/generate-packing-slip/${order.id}">Packing Slip</a></li>`;
+      orderHtml += `<li>${order.name} - $${order.total_price} <a href="/generate-packing-slip/${order.id}">Packing Slip</a></li>`;
     });
     orderHtml += '</ul>';
 
@@ -65,11 +65,15 @@ async function generateLineItemHtml(item) {
     let itemHtml = `
       <div class="flex-line-item">
         <div class="flex-line-item-description">
-          <p class="line-item-title"><strong>${packingListName}</strong></p>
-          <p class="line-item-sku">SKU: ${item.sku}</p>
+          <p class="line-item-title"><input type="checkbox" />&nbsp;<strong>${packingListName}</strong></p>`;
+        
+  if (item.sku) {
+    itemHtml += `<p class="line-item-sku">SKU: ${item.sku}</p>`;
+  }
+  itemHtml += `
         </div>
         <div class="flex-line-item-details">
-          <p class="text-align-right">${item.quantity}</p>
+          <p class="text-align-right"><strong>${item.quantity}</strong></p>
         </div>
       </div>`;
 
@@ -84,10 +88,10 @@ async function generateLineItemHtml(item) {
           return `
             <div class="flex-line-item">
               <div class="flex-line-item-description" style="margin-left: 20px;">
-                <span class="line-item-title">${componentPackingListName}</span>
+                <span class="line-item-title"><input type="checkbox" />&nbsp;${componentPackingListName}</span>
               </div>
               <div class="flex-line-item-details">
-                <span class="text-align-right">${item.quantity}</span>
+                <span class="text-align-right" style="margin-right: 20px;">${item.quantity}</span>
               </div>
             </div>`;
         }));
@@ -115,19 +119,25 @@ app.get('/generate-packing-slip/:orderId', async (req, res) => {
     });
 
     const order = response.data.order;
-
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+      
+        const options = { day: 'numeric', month: 'short', year: 'numeric' };
+        return date.toLocaleDateString('en-GB', options).replace(',', '');
+      }
+    const formattedDate = formatDate(order.created_at);
     let packingSlipHtml = `
       <html>
         <head>
           <style>
-            body { font-family: Arial, sans-serif; font-size: 12px; color: #333; margin: 0; padding: 20px; }
+            body { font-family: Helvetica, Arial, sans-serif; font-size: 12px; color: #333; margin: 0; padding: 20px; text-transform: uppercase; }
             .wrapper { width: 100%; max-width: 800px; margin: 0 auto; }
             .header { display: flex; justify-content: space-between; margin-bottom: 20px; }
-            .shop-title { max-width: 50%; }
-            .order-title { text-align: right; font-size: 18px; }
+            .shop-title {   text-align: right;}
+            .order-title {max-width: 65%;}
             hr { border: 1px solid #000; }
+            .subtitle-bold { font-size: 8pt; font-weight: bold;}
             .customer-addresses, .additional-info { margin-bottom: 20px; }
-            .shipping-address { max-width: 50%; }
             .flex-line-item { display: flex; justify-content: space-between; margin-bottom: 10px; }
             .flex-line-item-description { width: 70%; }
             .flex-line-item-details { width: 30%; text-align: right; }
@@ -136,31 +146,40 @@ app.get('/generate-packing-slip/:orderId', async (req, res) => {
         <body>
           <div class="wrapper">
             <div class="header">
+              <div class="order-title">
+                <div><strong style="font-size: 24px;">Order ${order.name}</strong></div>
+                <div><strong>${formattedDate}</strong></div>
+              </div>
               <div class="shop-title">
                 <strong>Brandsamor Commerce LLP</strong><br />
-                50 Raghavendra Nagar, Rajakilpakkam,<br />
-                Tambaram, Chennai - 600 073, Tamilnadu, India<br />
+                50 Raghavendra Nagar, Rajakilpakkam, <br />
+                Tambaram, Chennai 600073, India<br />
                 info@brandsamor.com
-              </div>
-              <div class="order-title">
-                <p><strong>Order ${order.name}</strong></p>
-                <p>${new Date(order.created_at).toLocaleDateString()}</p>
               </div>
             </div>
             <hr>
-            <div class="customer-addresses">
-              <div class="shipping-address">
-                <p class="subtitle-bold">Ship to</p>
-                <p class="address-detail">
-                  ${order.shipping_address.name}<br />
-                  ${order.shipping_address.company ? `${order.shipping_address.company}<br />` : ''}
-                  ${order.shipping_address.address1}, ${order.shipping_address.address2 || ''}<br />
-                  ${order.shipping_address.city}, ${order.shipping_address.province} ${order.shipping_address.zip}<br />
-                  <strong>${order.shipping_address.country}</strong><br />
-                  Phone: ${order.shipping_address.phone || ''}
-                </p>
-              </div>
-            </div>
+            <div class="customer-addresses" style="display: flex; justify-content: space-between;">
+                <!-- First Column: Shipping Address -->
+                <div class="shipping-address" style="width: 48%;">
+                    <p class="subtitle-bold">Ship to</p>
+                    <p class="address-detail">
+                    ${order.shipping_address.name}<br />
+                    ${order.shipping_address.company ? `${order.shipping_address.company}<br />` : ''}
+                    ${order.shipping_address.address1}, ${order.shipping_address.address2 || ''}<br />
+                    ${order.shipping_address.city}, ${order.shipping_address.province} ${order.shipping_address.zip}<br />
+                    <strong>${order.shipping_address.country}</strong><br />
+                    Phone: ${order.shipping_address.phone || ''}
+                    </p>
+                </div>
+
+                <!-- Second Column: Customer Notes -->
+                <div class="customer-notes" style="width: 48%;">
+                    <p class="subtitle-bold">Notes</p>
+                    <p class="address-detail">
+                    ${order.note ? order.note : 'No customer notes provided.'}
+                    </p>
+                </div>
+                </div>
             <hr>
             <div class="order-container">
               <div class="order-container-header">
@@ -174,9 +193,9 @@ app.get('/generate-packing-slip/:orderId', async (req, res) => {
     packingSlipHtml += lineItemHtmlArray.join('');
 
     packingSlipHtml += `
-            </div>
-            <hr>
-            <br/>
+            </div><br />
+            <hr><br />
+            <div style="text-align: end;"><input type="checkbox" />&nbsp;QC Complete</div>
           </div>
         </body>
       </html>`;
@@ -187,4 +206,10 @@ app.get('/generate-packing-slip/:orderId', async (req, res) => {
     console.error("Error generating packing slip:", error.response ? error.response.data : error.message);
     res.status(500).send('Error generating packing slip');
   }
+  function formatDate(dateString) {
+  const date = new Date(dateString);
+
+  const options = { day: 'numeric', month: 'short', year: 'numeric' };
+  return date.toLocaleDateString('en-GB', options).replace(',', '');
+}
 });
