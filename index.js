@@ -13,6 +13,21 @@ app.listen(3000, () => {
   console.log('App is running on http://localhost:3000');
 });
 
+// Basic Authentication middleware
+app.use((req, res, next) => {
+    const auth = { login: process.env.BASIC_AUTH_USERNAME, password: process.env.BASIC_AUTH_PASSWORD };
+  
+    const b64auth = (req.headers.authorization || '').split(' ')[1] || '';
+    const [login, password] = Buffer.from(b64auth, 'base64').toString().split(':');
+  
+    if (login && password && login === auth.login && password === auth.password) {
+      return next();
+    }
+  
+    res.set('WWW-Authenticate', 'Basic realm="401"');
+    res.status(401).send('Authentication required.');
+  });
+
 // Home route
 app.get('/', (req, res) => {
   res.send('Hello, Shopify!');
@@ -22,7 +37,10 @@ app.get('/', (req, res) => {
 app.use('/robots.txt', (req, res) => {
     res.sendFile(path.join(__dirname, 'robots.txt'));
   });
-
+  app.use((req, res, next) => {
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+    next();
+  });
 // Fetch and display orders
 app.get('/orders', async (req, res) => {
   try {
