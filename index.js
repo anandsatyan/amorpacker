@@ -281,7 +281,7 @@ app.get('/generate-packing-slip/:orderId', async (req, res) => {
     packingSlipHtml += `
             </div><br />
             <hr><br />
-            <div style="text-align: end;"><input type="checkbox" />&nbsp;QC Complete</div>
+            <div style="text-align: end;"><input type="checkbox" />&nbsp;Samples&nbsp; <input type="checkbox" />&nbsp;Stickers&nbsp;<input type="checkbox" />&nbsp;Tester+Holder&nbsp;<input type="checkbox" />&nbsp;Sample Box&nbsp;<input type="checkbox" />&nbsp;QC Complete</div>
           </div>
         </body>
       </html>`;
