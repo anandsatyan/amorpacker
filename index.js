@@ -445,6 +445,22 @@ app.get('/generate-customs-invoice/:orderId', async (req, res) => {
     }
 });
 
+async function fetchHsCodeFromInventoryItem(inventoryItemId) {
+    try {
+        const response = await axios.get(`${SHOPIFY_API_URL}/inventory_items/${inventoryItemId}.json`, {
+            headers: {
+                'X-Shopify-Access-Token': ACCESS_TOKEN,
+            },
+        });
+
+        const hsCode = response.data.inventory_item?.harmonized_system_code || 'N/A';
+        return hsCode;
+    } catch (error) {
+        console.error(`Error fetching HS code for inventory item ${inventoryItemId}:`, error.response ? error.response.data : error.message);
+        return 'N/A';
+    }
+}
+
 // Helper function to generate HTML for line items in customs invoice
 async function generateCustomsInvoiceLineItemHtml(item) {
     try {
@@ -550,7 +566,7 @@ async function generateInvoice(items) {
             </head>
             <body>
                 <div class="wrapper">
-                    <h1>Customs Invoice</h1>
+                    <h1>Export Invoice</h1>
                     <hr>
                     <div class="items">`;
 
