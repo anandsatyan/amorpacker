@@ -290,7 +290,7 @@ app.get('/generate-packing-slip/:orderId', async (req, res) => {
 
   } catch (error) {
     console.error("Error generating packing slip:", error.response ? error.response.data : error.message);
-    res.status(500).send('Error generating packing slip');
+    res.status(500).send('Error generating packing slip. Check if there are samples in this order or if this is a custom draft order.');
   }
   function formatDate(dateString) {
   const date = new Date(dateString);
@@ -470,7 +470,7 @@ app.get('/generate-customs-invoice/:orderId', async (req, res) => {
         res.send(customsInvoiceHtml);
     } catch (error) {
         console.error("Error generating Export Invoice:", error.response ? error.response.data : error.message);
-        res.status(500).send('Error generating Export Invoice');
+        res.status(500).send('Error generating Export Invoice. Check if there are samples in this order or if this is a custom draft order.');
     }
 });
 
