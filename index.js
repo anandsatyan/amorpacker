@@ -299,7 +299,13 @@ app.get('/generate-packing-slip/:orderId', async (req, res) => {
   return date.toLocaleDateString('en-GB', options).replace(',', '');
 }
 });
-
+function generateInvoiceNumber(orderName) {
+    // Extract the numeric part of the order name (e.g., from "#1119" extract "1119")
+    const orderNumber = parseInt(orderName.replace('#', ''));
+    const baseNumber = orderNumber - 1027; // Subtract 1027 from the order number
+    const invoiceNumber = `BRNSMR-FR-${String(baseNumber).padStart(6, '0')}`; // Format with leading zeros
+    return invoiceNumber;
+}
 
 app.get('/generate-customs-invoice/:orderId', async (req, res) => {
     const orderId = req.params.orderId;
@@ -314,6 +320,14 @@ app.get('/generate-customs-invoice/:orderId', async (req, res) => {
         const order = response.data.order;
         const shippingAddress = order.shipping_address;
         let grandTotal = 0;
+
+        const invoiceNumber = generateInvoiceNumber(order.name);
+        const invoiceDate = new Date().toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+        });
+
 
         let customsInvoiceHtml = `
             <html>
@@ -335,18 +349,18 @@ app.get('/generate-customs-invoice/:orderId', async (req, res) => {
                     .flex-line-item-description { width: 70%; }
                     .flex-line-item-details { width: 30%; text-align: right; }
                     .table-header { background-color: #ffffff; padding: 8px 0; font-weight: bold; }
+                    input[type="text"] {border: 0; padding: 0; text-align: right; width: 50px;}
                 </style>
             </head>
             <body>
                 <div class="wrapper">
                     <div class="header">
                         <div class="order-title">
-                            <div style="margin-bottom: 30px;"><strong style="font-size: 24px;">Export Invoice</strong></div>
-                            <div><strong style="font-size: 18px;">Invoice ${order.name}</strong><br /><span>Order Date: ${new Date(order.created_at).toLocaleDateString('en-GB', {
-                                day: '2-digit',
-                                month: 'short',
-                                year: 'numeric'
-                            })}</span></div>
+                            <div><strong style="font-size: 24px;">Export Invoice</strong><br /><br /><br /></div>
+                            <div style="margin-bottom: 5px;"><strong style="font-size: 16px;">Invoice # ${invoiceNumber}</strong></div>
+                            <div><strong style="font-size: 14px; margin-bottom: 30px;">Invoice Date: ${invoiceDate}</strong></div>
+
+                            
                         </div>
                         <div class="shop-title">
                             <strong>BRANDSAMOR COMMERCE LLP</strong><br />
@@ -359,6 +373,12 @@ app.get('/generate-customs-invoice/:orderId', async (req, res) => {
                         </div>
                     </div>
                     <hr>
+                    <div><strong style="font-size: 12px;">Order Number: ${order.name}</strong></div>
+                            <div><strong style="font-size: 12px;">Order Date: ${new Date(order.created_at).toLocaleDateString('en-GB', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric'
+                            })}</strong></div><br />
                     <div class="customer-addresses">
                         <div class="address-column">
                             <strong>Ship To:</strong><br /><br />
@@ -369,6 +389,10 @@ app.get('/generate-customs-invoice/:orderId', async (req, res) => {
                             <strong>${shippingAddress.country}</strong><br /><br />
                             ${shippingAddress.phone ? `Phone: ${shippingAddress.phone}<br />` : ''}
                             ${order.email ? `Email: ${order.email}` : ''}
+                            <br /><br /><br />
+                            <strong>Person:</strong><br /><br />
+                            ${shippingAddress.name}<br />
+                            Tel.:${shippingAddress.phone}
                         </div>
                         <div class="address-column">
                             <strong>Bill To:</strong><br /><br />
@@ -378,6 +402,9 @@ app.get('/generate-customs-invoice/:orderId', async (req, res) => {
                             Dubai, U.A.E<br /><br />
                             Phone: +971 52 154 3617<br />
                             Email: info@packamor.com
+                            <br /><br /><br />
+                            Gross Weight: <input type="text" /> kg <br />
+                            Net Weight: <input type="text" /> kg
                         </div>
                     </div>
                     <hr>
@@ -432,7 +459,9 @@ app.get('/generate-customs-invoice/:orderId', async (req, res) => {
                             <span><strong>$${grandTotal.toFixed(2)}</strong></span>
                         </div>
                     </div>
-                    <hr style="margin-top: 25px;" />
+                    <hr style="margin: 25px 0 0 0;" />
+                    <div style="text-align: right;"><img src="https://cdn.shopify.com/s/files/1/0857/0984/8873/files/BRANDSAMOR_COMMERCE_L.L.P..png?v=1722773361" width="150px" /></div>
+                    <br /><br /><br /><br />
                     <center>Declaration: The value declared is for customs purpose only.</center>
                 </div>
             </body>
@@ -640,7 +669,9 @@ async function generateInvoice(items) {
                     <span><strong>$${grandTotal.toFixed(2)}</strong></span>
                 </div>
             </div>
-            <hr style="margin-top: 25px;" />
+            <hr style="margin: 25px 0 0 0;" />
+            <div style="text-align: right;"><img src="https://cdn.shopify.com/s/files/1/0857/0984/8873/files/BRANDSAMOR_COMMERCE_L.L.P..png?v=1722773361" width="150px" /></div>
+            <br /><br /><br /><br />
             <center>Declaration: The value declared is for customs purpose only.</center>
         </div></body></html>`;
 
