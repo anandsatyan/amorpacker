@@ -66,7 +66,7 @@ app.get('/orders', async (req, res) => {
               <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Destination</th>
               <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Total Price</th>
               <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Actions</th>
-                        <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Customs Invoice</th>
+                        <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Export Invoice</th>
             </tr>
           </thead>
           <tbody>
@@ -95,7 +95,7 @@ app.get('/orders', async (req, res) => {
             <td style="padding: 8px; border-bottom: 1px solid #ddd;">${destination}</td>
             <td style="padding: 8px; border-bottom: 1px solid #ddd;">$${order.total_price}</td>
             <td style="padding: 8px; border-bottom: 1px solid #ddd;"><a href="/generate-packing-slip/${order.id}">Packing Slip</a></td>
-            <td style="padding: 8px; border-bottom: 1px solid #ddd;"><a href="/generate-customs-invoice/${order.id}" target="_blank">Customs Invoice</a></td> <!-- New link -->
+            <td style="padding: 8px; border-bottom: 1px solid #ddd;"><a href="/generate-customs-invoice/${order.id}" target="_blank">Export Invoice</a></td> <!-- New link -->
           </tr>
         `;
       });
@@ -341,7 +341,7 @@ app.get('/generate-customs-invoice/:orderId', async (req, res) => {
                 <div class="wrapper">
                     <div class="header">
                         <div class="order-title">
-                            <div style="margin-bottom: 30px;"><strong style="font-size: 24px;">Customs Invoice</strong></div>
+                            <div style="margin-bottom: 30px;"><strong style="font-size: 24px;">Export Invoice</strong></div>
                             <div><strong style="font-size: 18px;">Invoice ${order.name}</strong><br /><span>Order Date: ${new Date(order.created_at).toLocaleDateString('en-GB', {
                                 day: '2-digit',
                                 month: 'short',
@@ -440,11 +440,29 @@ app.get('/generate-customs-invoice/:orderId', async (req, res) => {
 
         res.send(customsInvoiceHtml);
     } catch (error) {
-        console.error("Error generating customs invoice:", error.response ? error.response.data : error.message);
-        res.status(500).send('Error generating customs invoice');
+        console.error("Error generating Export Invoice:", error.response ? error.response.data : error.message);
+        res.status(500).send('Error generating Export Invoice');
     }
 });
 
+// Function to fetch the inventory item ID using the variant ID
+async function fetchInventoryItemId(variantId) {
+    try {
+        const response = await axios.get(`${SHOPIFY_API_URL}/variants/${variantId}.json`, {
+            headers: {
+                'X-Shopify-Access-Token': ACCESS_TOKEN,
+            },
+        });
+
+        const inventoryItemId = response.data.variant.inventory_item_id;
+        return inventoryItemId;
+    } catch (error) {
+        console.error(`Error fetching inventory item ID for variant ${variantId}:`, error.response ? error.response.data : error.message);
+        return null;
+    }
+}
+
+// Function to fetch HS code from inventory item ID
 async function fetchHsCodeFromInventoryItem(inventoryItemId) {
     try {
         const response = await axios.get(`${SHOPIFY_API_URL}/inventory_items/${inventoryItemId}.json`, {
@@ -453,25 +471,28 @@ async function fetchHsCodeFromInventoryItem(inventoryItemId) {
             },
         });
 
-        const hsCode = response.data.inventory_item?.harmonized_system_code || 'N/A';
+        const hsCode = response.data.inventory_item?.harmonized_system_code || '';
         return hsCode;
     } catch (error) {
         console.error(`Error fetching HS code for inventory item ${inventoryItemId}:`, error.response ? error.response.data : error.message);
-        return 'N/A';
+        return '';
     }
 }
 
-// Helper function to generate HTML for line items in customs invoice
+// Helper function to generate HTML for line items in Export Invoice
 async function generateCustomsInvoiceLineItemHtml(item) {
     try {
+        // Fetch the inventory_item_id using the variant_id for the main product
+        const mainInventoryItemId = await fetchInventoryItemId(item.variant_id);
+        const mainHsCode = await fetchHsCodeFromInventoryItem(mainInventoryItemId);
+
         const productMetafields = await fetchProductMetafields(item.product_id);
-        const packingListName = productMetafields.find(mf => mf.namespace === 'custom' && mf.key === 'packing_list_name')?.value || item.title;
-        const hsCode = productMetafields.find(mf => mf.namespace === 'global' && mf.key === 'harmonized_system_code')?.value || '';
+        const mainPackingListName = productMetafields.find(mf => mf.namespace === 'custom' && mf.key === 'packing_list_name')?.value || item.title;
         const unitPrice = parseFloat(item.price) * 0.25 || 0;
         const quantity = item.quantity;
+        let totalPrice = 0;
 
         let itemHtml = '';
-        let totalPrice = 0;
 
         // Check if the product has components
         const componentsMetafield = productMetafields.find(mf => mf.namespace === 'custom' && mf.key === 'components');
@@ -480,6 +501,8 @@ async function generateCustomsInvoiceLineItemHtml(item) {
             if (Array.isArray(components) && components.length > 0) {
                 const componentHtmlArray = await Promise.all(components.map(async componentGid => {
                     const componentId = componentGid.split('/').pop();
+
+                    // Fetch the component product details
                     const componentProductResponse = await axios.get(`${SHOPIFY_API_URL}/products/${componentId}.json`, {
                         headers: {
                             'X-Shopify-Access-Token': ACCESS_TOKEN,
@@ -487,10 +510,16 @@ async function generateCustomsInvoiceLineItemHtml(item) {
                     });
                     const componentProduct = componentProductResponse.data.product;
 
+                    // Fetch the inventory_item_id for the component
+                    const componentVariantId = componentProduct.variants[0].id;
+                    const componentInventoryItemId = await fetchInventoryItemId(componentVariantId);
+                    const componentHSCode = await fetchHsCodeFromInventoryItem(componentInventoryItemId);
+
+                    // Fetch the Packing List Name metafield for the component
                     const componentMetafields = await fetchProductMetafields(componentId);
                     const componentPackingListName = componentMetafields.find(mf => mf.namespace === 'custom' && mf.key === 'packing_list_name')?.value || componentProduct.title;
-                    const componentHSCode = componentMetafields.find(mf => mf.namespace === 'global' && mf.key === 'harmonized_system_code')?.value || '';
-                    const componentRate = parseFloat(componentProduct.variants[0].price) * 0.25|| 0;
+                    
+                    const componentRate = parseFloat(componentProduct.variants[0].price) * 0.25 || 0;
                     const componentQuantity = quantity; // Use the parent item quantity for components
                     const componentAmount = componentRate * componentQuantity;
 
@@ -519,16 +548,16 @@ async function generateCustomsInvoiceLineItemHtml(item) {
                 itemHtml += componentHtmlArray.join('');
             }
         } else {
-            // If no components, use the product's own price
+            // If no components, use the main product's own price and HS code
             totalPrice = unitPrice * quantity;
 
             itemHtml += `
                 <div class="flex-line-item" style="display: flex; justify-content: space-between;">
                     <div style="width: 45%; text-align: left;">
-                        <span><strong>${packingListName}</strong></span>
+                        <span><strong>${mainPackingListName}</strong></span>
                     </div>
                     <div style="width: 10%; text-align: center;">
-                        <span>${hsCode}</span>
+                        <span>${mainHsCode}</span>
                     </div>
                     <div style="width: 10%; text-align: center;">
                         <span>${quantity}</span>
@@ -544,10 +573,13 @@ async function generateCustomsInvoiceLineItemHtml(item) {
 
         return { itemHtml, totalPrice };
     } catch (error) {
-        console.error("Error generating customs invoice line item HTML:", error.response ? error.response.data : error.message);
+        console.error("Error generating Export Invoice line item HTML:", error.response ? error.response.data : error.message);
         throw error;
     }
 }
+
+
+
 
 // Function to generate the entire invoice including the grand total at the bottom
 async function generateInvoice(items) {
