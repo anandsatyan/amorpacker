@@ -355,7 +355,7 @@ app.get('/generate-customs-invoice/:orderId', async (req, res) => {
             <body>
                 <div class="wrapper">
                     <div class="header">
-                        <div class="order-title">
+                        <div contentEditable="true" class="order-title">
                             <div><strong style="font-size: 24px;">Export Invoice</strong><br /><br /><br /></div>
                             <div style="margin-bottom: 5px;"><strong style="font-size: 16px;">Invoice # ${invoiceNumber}</strong></div>
                             <div><strong style="font-size: 14px; margin-bottom: 30px;">Invoice Date: ${invoiceDate}</strong></div>
@@ -373,7 +373,7 @@ app.get('/generate-customs-invoice/:orderId', async (req, res) => {
                         </div>
                     </div>
                     <hr>
-                    <div><strong style="font-size: 12px;">Order Number: ${order.name}</strong></div>
+                    <div contentEditable="true"><strong style="font-size: 12px;">Order Number: ${order.name}</strong></div>
                             <div><strong style="font-size: 12px;">Order Date: ${new Date(order.created_at).toLocaleDateString('en-GB', {
                                 day: '2-digit',
                                 month: 'short',
@@ -408,21 +408,25 @@ app.get('/generate-customs-invoice/:orderId', async (req, res) => {
                         </div>
                     </div>
                     <hr>
-                    <div class="details-columns">
+                    <div class="details-columns" contentEditable="true">
                         <div class="details-column">
                             <p><strong>Country of origin of goods:</strong> India</p>
                             <p><strong>Port of loading:</strong> Chennai</p>
                             <p><strong>Pre-Carriage by:</strong> Road</p>
                             <p><strong>Port of Discharge:</strong> Air</p>
                         </div>
-                        <div class="details-column">
+                        <div class="details-column" contentEditable="true">
                             <p><strong>Country of final destination:</strong> ${shippingAddress.country}</p>
-                            <p><strong>Final Destination:</strong> ${shippingAddress.city}, ${shippingAddress.province}, ${shippingAddress.country}</p>
+                            <p><strong>Final Destination:</strong> 
+                                ${shippingAddress.city ? `${shippingAddress.city}, ` : ''}
+                                ${shippingAddress.province ? `${shippingAddress.province}, ` : ''}
+                                ${shippingAddress.country ? `${shippingAddress.country}` : ''}
+                            </p>                            
                             <p><strong>Terms of Delivery & Payment:</strong> CIF</p>
                         </div>
                     </div>
                     <hr>
-                    <div class="order-container">
+                    <div class="order-container" contentEditable="true">
                         <!-- Table Headings -->
                         <div class="flex-line-item table-header" style="display: flex; justify-content: space-between;">
                             <div style="width: 45%; text-align: left;">
