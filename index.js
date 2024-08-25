@@ -550,7 +550,7 @@ async function generateCustomsInvoiceLineItemHtml(item) {
 
                     // Fetch the Packing List Name metafield for the component
                     const componentMetafields = await fetchProductMetafields(componentId);
-                    const componentPackingListName = componentMetafields.find(mf => mf.namespace === 'custom' && mf.key === 'packing_list_name')?.value || componentProduct.title;
+                    const componentPackingListName = componentMetafields.find(mf => mf.namespace === 'custom' && mf.key === 'export_label_name')?.value || componentProduct.title;
                     
                     const componentRate = parseFloat(componentProduct.variants[0].price) * 0.25 || 0;
                     const componentQuantity = quantity; // Use the parent item quantity for components
