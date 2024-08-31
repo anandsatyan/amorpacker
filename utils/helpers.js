@@ -91,27 +91,76 @@ async function fetchProductMetafieldsBySku(sku) {
 // Helper function to generate HTML for line items
 async function generateLineItemHtml(item) {
     try {
-        const productMetafields = await fetchProductMetafields(item.product_id);
-        const packingListName = productMetafields.find(
-            (mf) => mf.namespace === 'custom' && mf.key === 'packing_list_name'
-        )?.value || item.title;
+        let packingListName = item.title;
+        let hsCode = 'N/A'; // Default value for HS code
         let additionalInfo = '';
-        if (item.properties && item.properties.length > 0) {
-            additionalInfo = item.properties.map((prop) => `${prop.value}`).join(', ');
-        }
-        let displayTitle = item.title.startsWith('Sample') ? additionalInfo : packingListName;
-        const componentsMetafield = productMetafields.find(
-            (mf) => mf.namespace === 'custom' && mf.key === 'components'
-        );
 
+        // Check if the item is from a draft order (i.e., custom item without product ID or SKU)
+        if (!item.product_id && !item.sku) {
+            // Extract HS code from the item title if it contains it in brackets
+            const hsCodeMatch = item.title.match(/\((HS\d+)\)/);
+            if (hsCodeMatch) {
+                hsCode = hsCodeMatch[1];
+            }
+        } else {
+            // Regular orders with product IDs
+            const productMetafields = await fetchProductMetafields(item.product_id);
+            packingListName = productMetafields.find(
+                (mf) => mf.namespace === 'custom' && mf.key === 'packing_list_name'
+            )?.value || item.title;
+
+            if (item.properties && item.properties.length > 0) {
+                additionalInfo = item.properties.map((prop) => `${prop.value}`).join(', ');
+            }
+
+            // Use the component metafield logic if the item is a regular product
+            const componentsMetafield = productMetafields.find(
+                (mf) => mf.namespace === 'custom' && mf.key === 'components'
+            );
+
+            if (componentsMetafield && componentsMetafield.value) {
+                const components = JSON.parse(componentsMetafield.value);
+                if (Array.isArray(components) && components.length > 0) {
+                    // Fetch component details in parallel
+                    const componentHtmlArray = await Promise.all(
+                        components.map(async (componentGid) => {
+                            const componentId = componentGid.split('/').pop();
+                            const componentMetafields = await fetchProductMetafields(componentId);
+                            const componentPackingListName =
+                                componentMetafields.find(
+                                    (mf) =>
+                                        mf.namespace === 'custom' &&
+                                        mf.key === 'packing_list_name'
+                                )?.value || componentId;
+                            return `
+                                <div class="flex-line-item">
+                                  <div class="flex-line-item-description" style="margin-left: 20px;">
+                                    <span class="line-item-title"><input type="checkbox" />&nbsp;${componentPackingListName}</span>
+                                  </div>
+                                  <div class="flex-line-item-details">
+                                    <span class="text-align-right" style="margin-right: 20px;">${item.quantity}</span>
+                                  </div>
+                                </div>`;
+                        })
+                    );
+
+                    itemHtml += componentHtmlArray.join('');
+                }
+            }
+        }
+
+        // Prepare item HTML
         let itemHtml = `
           <div class="flex-line-item">
             <div class="flex-line-item-description">
-              <p class="line-item-title"><input type="checkbox" />&nbsp;<strong>${displayTitle}</strong></p>`;
+              <p class="line-item-title"><input type="checkbox" />&nbsp;<strong>${packingListName}</strong></p>
+              ${hsCode !== 'N/A' ? `<p>HS Code: ${hsCode}</p>` : ''}
+        `;
 
         if (item.sku) {
             itemHtml += `<p class="line-item-sku">SKU: ${item.sku}</p>`;
         }
+
         itemHtml += `
             </div>
             <div class="flex-line-item-details">
@@ -123,42 +172,13 @@ async function generateLineItemHtml(item) {
         const componentsHtml = await addComponentsForSampleItem(item, additionalInfo);
         itemHtml += componentsHtml;
 
-        if (componentsMetafield && componentsMetafield.value) {
-            const components = JSON.parse(componentsMetafield.value);
-            if (Array.isArray(components) && components.length > 0) {
-                // Fetch component details in parallel
-                const componentHtmlArray = await Promise.all(
-                    components.map(async (componentGid) => {
-                        const componentId = componentGid.split('/').pop();
-                        const componentMetafields = await fetchProductMetafields(componentId);
-                        const componentPackingListName =
-                            componentMetafields.find(
-                                (mf) =>
-                                    mf.namespace === 'custom' &&
-                                    mf.key === 'packing_list_name'
-                            )?.value || componentId;
-                        return `
-                            <div class="flex-line-item">
-                              <div class="flex-line-item-description" style="margin-left: 20px;">
-                                <span class="line-item-title"><input type="checkbox" />&nbsp;${componentPackingListName}</span>
-                              </div>
-                              <div class="flex-line-item-details">
-                                <span class="text-align-right" style="margin-right: 20px;">${item.quantity}</span>
-                              </div>
-                            </div>`;
-                    })
-                );
-
-                itemHtml += componentHtmlArray.join('');
-            }
-        }
-
         return itemHtml;
     } catch (error) {
         console.error('Error generating line item HTML:', error.response ? error.response.data : error.message);
         throw error;
     }
 }
+
 
 // Function to check if the line item is a sample and add components if it has them
 async function addComponentsForSampleItem(item, additionalInfo) {
@@ -261,7 +281,7 @@ async function generateCustomsInvoiceLineItemsHtml(order) {
       // Process each line item in the order
       for (const item of order.line_items) {
         let packingListName = item.title; // Default to item title
-        let hsCode = 'N/A'; // Default HS code
+        let hsCode = ''; // Default HS code
   
         // Check if product ID or SKU exists
         if (item.product_id && item.sku) {
