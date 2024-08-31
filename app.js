@@ -1,7 +1,9 @@
 // app.js
 const express = require('express');
+const bodyParser = require('body-parser'); // Import body-parser
 const path = require('path');
 const app = express();
+app.use(bodyParser.json());
 require('dotenv').config();
 
 // Import routes
@@ -9,6 +11,7 @@ const homeRoute = require('./routes/home');
 const ordersRoute = require('./routes/orders');
 const packingSlipRoute = require('./routes/packingSlip');
 const customsInvoiceRoute = require('./routes/customsInvoice');
+const createFedexShipment = require('./routes/createFedexShipment'); // Adjust the path if necessary
 
 // Import middleware
 const basicAuthMiddleware = require('./middleware/basicAuth');
@@ -27,6 +30,9 @@ app.use('/generate-packing-slip', packingSlipRoute);
 
 // Customs invoice route
 app.use('/generate-customs-invoice', customsInvoiceRoute);
+
+// Create Fedex shipment
+app.use('/create-shipment', createFedexShipment);
 
 // Serve the robots.txt file and set headers
 app.use('/robots.txt', (req, res) => {

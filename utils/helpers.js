@@ -264,148 +264,200 @@ function generateInvoiceNumber(orderName) {
 
 async function generateCustomsInvoiceLineItemsHtml(order) {
     try {
-      const aggregatedItems = {};
-  
-      // Helper function to add or aggregate items in the collection
-      const addOrUpdateItem = (key, itemData) => {
-        if (aggregatedItems[key]) {
-          // If the item exists, aggregate the quantity and total price
-          aggregatedItems[key].quantity += itemData.quantity;
-          aggregatedItems[key].totalPrice += itemData.totalPrice;
-        } else {
-          // If the item does not exist, add it to the collection
-          aggregatedItems[key] = itemData;
-        }
-      };
-  
-      // Process each line item in the order
-      for (const item of order.line_items) {
-        let packingListName = item.title; // Default to item title
-        let hsCode = ''; // Default HS code
-  
-        // Check if product ID or SKU exists
-        if (item.product_id && item.sku) {
-          // Regular item logic
-          const mainInventoryItemId = await fetchInventoryItemId(item.variant_id);
-          hsCode = await fetchHsCodeFromInventoryItem(mainInventoryItemId);
-  
-          const productMetafields = await fetchProductMetafields(item.product_id);
-          packingListName =
-            productMetafields.find(
-              (mf) => mf.namespace === "custom" && mf.key === "packing_list_name"
-            )?.value || item.title;
-  
-          // Logic for items with components
-          const componentsMetafield = productMetafields.find(
-            (mf) => mf.namespace === "custom" && mf.key === "components"
-          );
-  
-          if (componentsMetafield && componentsMetafield.value) {
-            const components = JSON.parse(componentsMetafield.value);
-            if (Array.isArray(components) && components.length > 0) {
-              for (const componentGid of components) {
-                const componentId = componentGid.split("/").pop();
-  
-                // Fetch the component product details
-                const componentProductResponse = await axios.get(
-                  `${SHOPIFY_API_URL}/products/${componentId}.json`,
-                  {
-                    headers: {
-                      "X-Shopify-Access-Token": ACCESS_TOKEN,
-                    },
-                  }
-                );
-                const componentProduct = componentProductResponse.data.product;
-  
-                // Fetch the inventory_item_id for the component
-                const componentVariantId = componentProduct.variants[0].id;
-                const componentInventoryItemId = await fetchInventoryItemId(
-                  componentVariantId
-                );
-                const componentHSCode = await fetchHsCodeFromInventoryItem(
-                  componentInventoryItemId
-                );
-  
-                // Fetch the Packing List Name metafield for the component
-                const componentMetafields = await fetchProductMetafields(
-                  componentId
-                );
-                const componentPackingListName =
-                  componentMetafields.find(
-                    (mf) =>
-                      mf.namespace === "custom" &&
-                      mf.key === "export_label_name"
-                  )?.value || componentProduct.title;
-  
-                const componentRate =
-                  parseFloat(componentProduct.variants[0].price) * 0.25 || 0;
-                const componentQuantity = item.quantity; // Use the parent item quantity for components
-                const componentAmount = componentRate * componentQuantity;
-  
-                // Generate a unique key for the component to avoid duplicates
-                const componentKey = `${componentPackingListName}-${componentHSCode}`;
-  
-                // Add or aggregate the component in the collection
-                addOrUpdateItem(componentKey, {
-                  name: componentPackingListName,
-                  hsCode: componentHSCode,
-                  quantity: componentQuantity,
-                  unitPrice: componentRate,
-                  totalPrice: componentAmount,
-                });
-              }
+        const aggregatedItems = {};
+        const lineItemsForAWB = []; // Array to hold line items for any AWB (Air Waybill) creation
+
+        // Helper function to add or aggregate items in the collection
+        const addOrUpdateItem = (key, itemData) => {
+            if (aggregatedItems[key]) {
+                // If the item exists, aggregate the quantity and total price
+                aggregatedItems[key].quantity += itemData.quantity;
+                aggregatedItems[key].totalPrice += itemData.totalPrice;
+            } else {
+                // If the item does not exist, add it to the collection
+                aggregatedItems[key] = itemData;
             }
-          } else {
-            // Regular item without components
-            const unitPrice = parseFloat(item.price) * 0.25 || 0;
-            const quantity = item.quantity;
-            const totalPrice = unitPrice * quantity;
-  
-            // Generate a unique key for the line item
-            const itemKey = `${packingListName}-${hsCode}`;
-  
-            // Add or aggregate the line item in the collection
-            addOrUpdateItem(itemKey, {
-              name: packingListName,
-              hsCode: hsCode,
-              quantity: quantity,
-              unitPrice: unitPrice,
-              totalPrice: totalPrice,
-            });
-          }
-        } else {
-          // Custom item logic (no product ID or SKU)
-          const unitPrice = parseFloat(item.price) * 0.25 || 0;
-          const quantity = item.quantity;
-          const totalPrice = unitPrice * quantity;
-  
-          // Check if the title contains an HS code in brackets
-          const hsCodeMatch = item.title.match(/\((HS\d+)\)/);
-          if (hsCodeMatch) {
-            hsCode = hsCodeMatch[1]; // Extract HS code from the title
-          }
-  
-          // Generate a unique key for the custom item
-          const customItemKey = `${packingListName}-${hsCode}`;
-  
-          // Add or aggregate the custom item in the collection
-          addOrUpdateItem(customItemKey, {
-            name: packingListName,
-            hsCode: hsCode,
-            quantity: quantity,
-            unitPrice: unitPrice,
-            totalPrice: totalPrice,
-          });
+        };
+
+        // Process each line item in the order
+        for (const item of order.line_items) {
+            let packingListName = item.title; // Default to item title
+            let hsCode = ''; // Default HS code
+
+            if (item.product_id && item.sku) {
+                // Regular item logic
+                const mainInventoryItemId = await fetchInventoryItemId(item.variant_id);
+                hsCode = await fetchHsCodeFromInventoryItem(mainInventoryItemId);
+
+                const productMetafields = await fetchProductMetafields(item.product_id);
+                packingListName = productMetafields.find(
+                    (mf) => mf.namespace === "custom" && mf.key === "packing_list_name"
+                )?.value || item.title;
+
+                const componentsMetafield = productMetafields.find(
+                    (mf) => mf.namespace === "custom" && mf.key === "components"
+                );
+
+                if (componentsMetafield && componentsMetafield.value) {
+                    const components = JSON.parse(componentsMetafield.value);
+                    if (Array.isArray(components) && components.length > 0) {
+                        for (const componentGid of components) {
+                            const componentId = componentGid.split("/").pop();
+
+                            // Fetch the component product details
+                            const componentProductResponse = await axios.get(
+                                `${SHOPIFY_API_URL}/products/${componentId}.json`,
+                                {
+                                    headers: {
+                                        "X-Shopify-Access-Token": ACCESS_TOKEN,
+                                    },
+                                }
+                            );
+                            const componentProduct = componentProductResponse.data.product;
+
+                            // Fetch the inventory_item_id for the component
+                            const componentVariantId = componentProduct.variants[0].id;
+                            const componentInventoryItemId = await fetchInventoryItemId(
+                                componentVariantId
+                            );
+                            const componentHSCode = await fetchHsCodeFromInventoryItem(
+                                componentInventoryItemId
+                            );
+
+                            // Fetch the Packing List Name metafield for the component
+                            const componentMetafields = await fetchProductMetafields(
+                                componentId
+                            );
+                            const componentPackingListName =
+                                componentMetafields.find(
+                                    (mf) =>
+                                        mf.namespace === "custom" &&
+                                        mf.key === "export_label_name"
+                                )?.value || componentProduct.title;
+
+                            const componentRate =
+                                parseFloat(componentProduct.variants[0].price) * 0.25 || 0;
+                            const componentQuantity = item.quantity; // Use the parent item quantity for components
+                            const componentAmount = componentRate * componentQuantity;
+
+                            // Generate a unique key for the component to avoid duplicates
+                            const componentKey = `${componentPackingListName}-${componentHSCode}`;
+
+                            // Add or aggregate the component in the collection
+                            addOrUpdateItem(componentKey, {
+                                name: componentPackingListName,
+                                hsCode: componentHSCode,
+                                quantity: componentQuantity,
+                                unitPrice: componentRate,
+                                totalPrice: componentAmount,
+                            });
+
+                            // Add component details to AWB line items array
+                            lineItemsForAWB.push({
+                                description: componentPackingListName,
+                                countryOfManufacture: "IN", // Example value, replace with dynamic value if available
+                                harmonizedCode: componentHSCode,
+                                weight: 0.5, // Example value, replace with actual weight
+                                quantity: componentQuantity,
+                                quantityUnits: "PCS",
+                                unitPrice: {
+                                    amount: componentRate,
+                                    currency: "USD",
+                                },
+                                customsValue: {
+                                    amount: componentAmount,
+                                    currency: "USD",
+                                },
+                            });
+                        }
+                    }
+                } else {
+                    // Regular item without components
+                    const unitPrice = parseFloat(item.price) * 0.25 || 0;
+                    const quantity = item.quantity;
+                    const totalPrice = unitPrice * quantity;
+
+                    // Generate a unique key for the line item
+                    const itemKey = `${packingListName}-${hsCode}`;
+
+                    // Add or aggregate the line item in the collection
+                    addOrUpdateItem(itemKey, {
+                        name: packingListName,
+                        hsCode: hsCode,
+                        quantity: quantity,
+                        unitPrice: unitPrice,
+                        totalPrice: totalPrice,
+                    });
+
+                    // Add item details to AWB line items array
+                    lineItemsForAWB.push({
+                        description: packingListName,
+                        countryOfManufacture: "IN", // Example value, replace with dynamic value if available
+                        harmonizedCode: hsCode,
+                        weight: 0.5, // Example value, replace with actual weight
+                        quantity: quantity,
+                        quantityUnits: "PCS",
+                        unitPrice: {
+                            amount: unitPrice,
+                            currency: "USD",
+                        },
+                        customsValue: {
+                            amount: totalPrice,
+                            currency: "USD",
+                        },
+                    });
+                }
+            } else {
+                // Custom item logic (no product ID or SKU)
+                const unitPrice = parseFloat(item.price) * 0.25 || 0;
+                const quantity = item.quantity;
+                const totalPrice = unitPrice * quantity;
+
+                // Check if the title contains an HS code in brackets
+                const hsCodeMatch = item.title.match(/\((HS\d+)\)/);
+                if (hsCodeMatch) {
+                    hsCode = hsCodeMatch[1]; // Extract HS code from the title
+                }
+
+                // Generate a unique key for the custom item
+                const customItemKey = `${packingListName}-${hsCode}`;
+
+                // Add or aggregate the custom item in the collection
+                addOrUpdateItem(customItemKey, {
+                    name: packingListName,
+                    hsCode: hsCode,
+                    quantity: quantity,
+                    unitPrice: unitPrice,
+                    totalPrice: totalPrice,
+                });
+
+                // Add custom item details to AWB line items array
+                lineItemsForAWB.push({
+                    description: packingListName,
+                    countryOfManufacture: "IN", // Example value, replace with dynamic value if available
+                    harmonizedCode: hsCode,
+                    weight: 0.5, // Example value, replace with actual weight
+                    quantity: quantity,
+                    quantityUnits: "PCS",
+                    unitPrice: {
+                        amount: unitPrice,
+                        currency: "USD",
+                    },
+                    customsValue: {
+                        amount: totalPrice,
+                        currency: "USD",
+                    },
+                });
+            }
         }
-      }
-  
-      // Generate HTML from the aggregated items collection
-      let itemsHtml = "";
-      let grandTotal = 0;
-  
-      for (const key in aggregatedItems) {
-        const item = aggregatedItems[key];
-        itemsHtml += `
+
+        // Generate HTML from the aggregated items collection
+        let itemsHtml = "";
+        let grandTotal = 0;
+
+        for (const key in aggregatedItems) {
+            const item = aggregatedItems[key];
+            itemsHtml += `
                 <div class="flex-line-item" style="display: flex; justify-content: space-between;">
                     <div style="width: 45%; text-align: left;">
                         <span><strong>${item.name}</strong></span>
@@ -423,20 +475,20 @@ async function generateCustomsInvoiceLineItemsHtml(order) {
                         <span>$${item.totalPrice.toFixed(2)}</span>
                     </div>
                 </div>`;
-        grandTotal += item.totalPrice;
-      }
-  
-      // Return the HTML and the grand total
-      return { itemsHtml, grandTotal };
+            grandTotal += item.totalPrice;
+        }
+
+        // Return the HTML, grand total, and line items for AWB
+        return { itemsHtml, grandTotal, lineItemsForAWB };
     } catch (error) {
-      console.error(
-        "Error generating Export Invoice line items HTML:",
-        error.response ? error.response.data : error.message
-      );
-      throw error;
+        console.error(
+            "Error generating Export Invoice line items HTML:",
+            error.response ? error.response.data : error.message
+        );
+        throw error;
     }
-  }
-  
+}
+
   
 
 module.exports = {

@@ -25,7 +25,6 @@ router.get('/:orderId', async (req, res) => {
       });
 
       const { itemsHtml, grandTotal } = await generateCustomsInvoiceLineItemsHtml(order);
-console.log("HITTTTTT");
       let customsInvoiceHtml = `
           <html>
           <head>
@@ -47,9 +46,42 @@ console.log("HITTTTTT");
                   .flex-line-item-details { width: 30%; text-align: right; }
                   .table-header { background-color: #ffffff; padding: 8px 0; font-weight: bold; }
                   input[type="text"] {border: 0; padding: 0; text-align: right; width: 50px;}
+                  @media print {
+                    #actions-div {
+                        display:none;
+                    }
+                  }
               </style>
+                    <script>
+                    async function createAWB() {
+                        const orderId = '${orderId}'; // Use the current order ID
+                        try {
+                            const response = await fetch('/create-shipment', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ orderId })
+                            });
+                            const result = await response.json();
+                            console.log(result);
+                            if (response.ok) {
+                                alert('AWB created successfully! AWB Number: ' + result.awbNumber);
+                            } else {
+                                alert('Error creating AWB: ' + result.error);
+                            }
+                        } catch (error) {
+                            alert('Error creating AWB  : ' + error.message);
+                        }
+                    }
+                    </script>
           </head>
           <body>
+                  <div id="actions-div" style="text-align:center; border-bottom: 1px solid #000; padding-bottom: 20px;">
+                    <button onclick="createAWB()">Create Fedex AWB</button>
+                    
+                  </div>
+            <br /><br />
               <div class="wrapper">
                   <div class="header">
                       <div contentEditable="true" class="order-title">
@@ -154,6 +186,7 @@ console.log("HITTTTTT");
                   <div style="text-align: right;"><img src="https://cdn.shopify.com/s/files/1/0857/0984/8873/files/BRANDSAMOR_COMMERCE_L.L.P..png?v=1722773361" width="150px" /></div>
                   <br /><br /><br /><br />
                   <center>Declaration: The value declared is for customs purpose only.</center>
+                  <br /><br />
               </div>
           </body>
           </html>`;
