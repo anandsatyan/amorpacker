@@ -47,7 +47,7 @@ router.get('/:orderId', async (req, res) => {
                   .table-header { background-color: #ffffff; padding: 8px 0; font-weight: bold; }
                   input[type="text"] {border: 0; padding: 0; text-align: right; width: 50px;}
                   @media print {
-                    #actions-div {
+                    .actions-div {
                         display:none;
                     }
                   }
@@ -75,10 +75,27 @@ router.get('/:orderId', async (req, res) => {
                         }
                     }
                     </script>
+                    <script>
+                        function validateAndPrint() {
+                            // Get the input values
+                            const grossWeight = document.getElementsByName("grossWeight")[0].value;
+                            const netWeight = document.getElementsByName("netWeight")[0].value;
+                            const noOfPackages = document.getElementsByName("noOfPackages")[0].value;
+
+                            // Check if any of the input fields are empty
+                            if (grossWeight === "" || netWeight === "" || noOfPackages === "") {
+                                alert("Please fill in all fields before printing the invoice.");
+                            } else {
+                                // If all fields are filled, proceed to print
+                                window.print();
+                            }
+                        }
+                    </script>
           </head>
           <body>
-                  <div id="actions-div" style="text-align:center; border-bottom: 1px solid #000; padding-bottom: 20px;">
+                  <div class="actions-div" style="text-align:center; border-bottom: 1px solid #000; padding-bottom: 20px;">
                     <button onclick="createAWB()">Create Fedex AWB</button>
+                    <button onClick="validateAndPrint()">Print Invoice</button>
                     
                   </div>
             <br /><br />
@@ -106,7 +123,7 @@ router.get('/:orderId', async (req, res) => {
                               month: 'short',
                               year: 'numeric'
                           })}</strong></div><br />
-                  <div class="customer-addresses">
+                  <div class="customer-addresses"  contentEditable="true">
                       <div class="address-column">
                           <strong>Ship To:</strong><br /><br />
                           ${shippingAddress.name}<br />
@@ -130,8 +147,9 @@ router.get('/:orderId', async (req, res) => {
                           Phone: +971 52 154 3617<br />
                           Email: info@packamor.com
                           <br /><br /><br />
-                          Gross Weight: <input type="text" /> kg <br />
-                          Net Weight: <input type="text" /> kg
+                          Gross Weight: <input type="text" name="grossWeight" /> kg <br />
+                          Net Weight: <input type="text" name="netWeight" /> kg <br />
+                          No. of Packages: <input type="text" name="noOfPackages" /> <br />
                       </div>
                   </div>
                   <hr>
@@ -178,7 +196,7 @@ router.get('/:orderId', async (req, res) => {
                       <div style="width: 80%; text-align: right;">
                           <span><strong>Grand Total</strong></span>
                       </div>
-                      <div style="width: 20%; text-align: right;">
+                      <div contentEditable="true" style="width: 20%; text-align: right;">
                           <span><strong>$${grandTotal.toFixed(2)}</strong></span>
                       </div>
                   </div>
