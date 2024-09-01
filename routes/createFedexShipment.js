@@ -67,11 +67,14 @@ async function createShipment(order, lineItemsForAWB) {
             },
             "labelResponseOptions": "URL_ONLY",
             "requestedShipment": {
-                "pickupType": "DROPOFF_AT_FEDEX_LOCATION",
+                "pickupType": "USE_SCHEDULED_PICKUP", 
                 "shipper": {
                     "contact": {
-                        "personName": "Your Company Name",
-                        "phoneNumber": "1234567890"
+                        "personName": "Packamor India - Fulfillment Center", 
+                        "companyName": "Brandsamor Commerce LLP",
+                        "taxIdentificationNumber": "33ABCFB8402A1Z8",
+                        "phoneNumber": "+919443585396",
+                        "emailAddress": "info@packamor.com",
                     },
                     "address": {
                         "streetLines": [
@@ -127,7 +130,7 @@ async function createShipment(order, lineItemsForAWB) {
                         "amount": formattedLineItems.reduce((total, item) => total + item.customsValue.amount, 0),
                         "currency": "USD"
                     },
-                    "commodities": formattedLineItems // Use the line items generated for the AWB
+                    "commodities": formattedLineItems 
                 },
                 "labelSpecification": {
                     "labelFormatType": "COMMON2D",
@@ -152,6 +155,9 @@ async function createShipment(order, lineItemsForAWB) {
                 })),
                 "serviceType": "INTERNATIONAL_PRIORITY",
                 "packagingType": "YOUR_PACKAGING"
+                // TODO: add shipment reference number (order number), PO No (order number), Invoice number is BEX/24-25/0005 BEX/Year/Incremental invoice number , Department No is CS5/G/CIF/U/-/-/0/310824 last six digits are ddmmyy of the date invoice was generated/finalized.
+                // TODO: Check if invoice can be attached 
+                // TODO: Give download facility for customs invoice - naming convention - CustomerName-OrderNo-InvoiceNoSuffix
             }
         };
         // Fetch access token and send request to shipping carrier API

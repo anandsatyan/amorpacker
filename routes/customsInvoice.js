@@ -52,29 +52,51 @@ router.get('/:orderId', async (req, res) => {
                     }
                   }
               </style>
-                    <script>
-                    async function createAWB() {
-                        const orderId = '${orderId}'; // Use the current order ID
-                        try {
-                            const response = await fetch('/create-shipment', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({ orderId })
-                            });
-                            const result = await response.json();
-                            console.log(result);
-                            if (response.ok) {
-                                alert('AWB created successfully! AWB Number: ' + result.awbNumber);
-                            } else {
-                                alert('Error creating AWB: ' + result.error);
-                            }
-                        } catch (error) {
-                            alert('Error creating AWB  : ' + error.message);
-                        }
-                    }
-                    </script>
+              <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
+        <script>
+          window.onload = function() {
+            document.getElementById('generatePdfButton').addEventListener('click', () => {
+              const customerName = 'ExportInvoice';
+              const orderNumber = 'Order';
+              const fileName = \`\${customerName}-\${orderNumber}.pdf\`;
+              const invoiceContent = document.getElementById('printableInvoiceArea'); 
+
+              const options = {
+                margin: 0.5,
+                filename: fileName,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+              };
+
+              html2pdf().from(invoiceContent).set(options).save();
+            });
+
+            document.getElementById('createAWBButton').addEventListener('click', async () => {
+              const orderId = '${orderId}';
+              try {
+                const response = await fetch('/create-shipment', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({ orderId })
+                });
+                const result = await response.json();
+                const transactionShipment = result.output?.transactionShipments?.[0];
+                const awbNumber = transactionShipment?.completedShipmentDetail?.masterTrackingId?.trackingNumber;
+
+                if (response.ok && awbNumber) {
+                  alert('AWB created successfully! AWB Number: ' + awbNumber);
+                } else {
+                  alert('Error creating AWB: ' + (result.error || 'Unknown error'));
+                }
+              } catch (error) {
+                alert('Error creating AWB: ' + error.message);
+              }
+            });
+          };
+        </script>
                     <script>
                         function validateAndPrint() {
                             // Get the input values
@@ -96,10 +118,10 @@ router.get('/:orderId', async (req, res) => {
                   <div class="actions-div" style="text-align:center; border-bottom: 1px solid #000; padding-bottom: 20px;">
                     <button onclick="createAWB()">Create Fedex AWB</button>
                     <button onClick="validateAndPrint()">Print Invoice</button>
-                    
+                    <button id="generatePdfButton">Download PDF</button>
                   </div>
             <br /><br />
-              <div class="wrapper">
+              <div id="printableInvoiceArea" class="wrapper">
                   <div class="header">
                       <div contentEditable="true" class="order-title">
                           <div><strong style="font-size: 24px;">Export Invoice</strong><br /><br /><br /></div>
@@ -190,6 +212,7 @@ router.get('/:orderId', async (req, res) => {
                           </div>
                       </div>
                       ${itemsHtml}
+                      <br /><br />
                   </div>
                   <hr style="margin-bottom: 10px;" />
                   <div class="flex-line-item" style="display: flex; justify-content: space-between; font-size: 16px;">
