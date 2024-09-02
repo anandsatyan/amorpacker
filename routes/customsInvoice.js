@@ -1,4 +1,3 @@
-// routes/customsInvoice.js
 const express = require('express');
 const axios = require('axios');
 const router = express.Router();
@@ -47,20 +46,40 @@ router.get('/:orderId', async (req, res) => {
           <script>
             window.onload = function() {
               document.getElementById('generatePdfButton').addEventListener('click', () => {
-                const customerName = 'ExportInvoice';
-                const orderNumber = 'Order';
-                const fileName = \`\${customerName}-\${orderNumber}.pdf\`;
+                const orderName = '${order.name}';
+                const recipientName = '${shippingAddress.name}';
+                const fileName = \`\${orderName} - \${recipientName}.pdf\`;
                 const invoiceContent = document.getElementById('printableInvoiceArea');
 
-                const options = {
-                  margin: 0.5,
-                  filename: fileName,
-                  image: { type: 'jpeg', quality: 0.98 },
-                  html2canvas: { scale: 2 },
-                  jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-                };
+                // Wait for all images to be fully loaded
+                const images = invoiceContent.getElementsByTagName('img');
+                const imagePromises = Array.from(images).map(img => {
+                  return new Promise((resolve, reject) => {
+                    if (img.complete) {
+                      resolve();
+                    } else {
+                      img.onload = resolve;
+                      img.onerror = reject;
+                    }
+                  });
+                });
 
-                html2pdf().from(invoiceContent).set(options).save();
+                Promise.all(imagePromises)
+                  .then(() => {
+                    const options = {
+                      margin: 0.5,
+                      filename: fileName,
+                      image: { type: 'jpeg', quality: 0.98 },
+                      html2canvas: { scale: 2 },
+                      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+                    };
+
+                    html2pdf().from(invoiceContent).set(options).save();
+                  })
+                  .catch((error) => {
+                    console.error('Error loading images:', error);
+                    alert('Failed to load all images, please try again.');
+                  });
               });
 
               document.getElementById('createAWBButton').addEventListener('click', async () => {
@@ -222,8 +241,8 @@ router.get('/:orderId', async (req, res) => {
                           <th style="width: 50%;">Description of Goods</th>
                           <th style="width: 10%; text-align: center;">HSN</th>
                           <th style="width: 5%; text-align: center;">Qty</th>
-                          <th style="width: 15%; text-align: center;">Rate (USD)</th>
-                          <th style="width: 15%; text-align: right;">Amount (USD)</th>
+                          <th style="width: 15%; text-align: center;">Rate</th>
+                          <th style="width: 15%; text-align: right;">Amount</th>
                       </tr>
                   </thead>
                   <tbody>
@@ -237,7 +256,7 @@ router.get('/:orderId', async (req, res) => {
                         <td></td>
                       </tr>
                       <tr>
-                        <td colspan="5"><strong>AMOUNT</strong></td>
+                        <td colspan="5"><strong>AMOUNT (USD)</strong></td>
                         <td style="text-align: right; font-weight: bold;">$${grandTotal.toFixed(2)}</td>
                       </tr>
                       <tr>
@@ -251,11 +270,13 @@ router.get('/:orderId', async (req, res) => {
                       </tr>
                   </tbody>
               </table>
+             <!-- Image at the Bottom -->
+              <div style="text-align: right; margin-top: -80px;">
+                  <img id="brandImage" src="https://cdn.shopify.com/s/files/1/0857/0984/8873/files/BRANDSAMOR_COMMERCE_L.L.P..png?v=1722773361" width="150px" />
+              </div>
           </div>
 
-          <div style="text-align: right; position: relative; top: -80px; right: 40px">
-              <img src="https://cdn.shopify.com/s/files/1/0857/0984/8873/files/BRANDSAMOR_COMMERCE_L.L.P..png?v=1722773361" width="150px" />
-          </div>
+         
       </body>
       </html>`;
 
