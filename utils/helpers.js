@@ -335,8 +335,10 @@ async function generateCustomsInvoiceLineItemsHtml(order) {
                                         mf.key === "export_label_name"
                                 )?.value || componentProduct.title;
 
-                            const componentRate =
+                            let componentRate =
                                 parseFloat(componentProduct.variants[0].price) * 0.25 || 0;
+                            componentRate = parseFloat(componentRate.toFixed(2)); // Round unit price to two decimal places
+
                             const componentQuantity = item.quantity; // Use the parent item quantity for components
                             const componentAmount = componentRate * componentQuantity;
 
@@ -373,7 +375,8 @@ async function generateCustomsInvoiceLineItemsHtml(order) {
                     }
                 } else {
                     // Regular item without components
-                    const unitPrice = parseFloat(item.price) * 0.25 || 0;
+                    let unitPrice = parseFloat(item.price) * 0.25 || 0;
+                    unitPrice = parseFloat(unitPrice.toFixed(2));
                     const quantity = item.quantity;
                     const totalPrice = unitPrice * quantity;
 

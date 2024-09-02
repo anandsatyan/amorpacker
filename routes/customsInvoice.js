@@ -409,12 +409,12 @@ router.get('/:orderId', async (req, res) => {
                   <tbody>
                       ${itemsHtml}
                       <tr>
-                        <td></td>
-                        <td><strong></strong></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
+                        <td style="width: 5%; text-align: left; border: 1px solid black; padding: 5px;"></td>
+                        <td style="text-align: left; border: 1px solid black; padding: 5px; font-weight: bold"></td>
+                        <td style="text-align: center; border: 1px solid black; padding: 5px;"></td>
+                        <td style="text-align: center; border: 1px solid black; padding: 5px;"></td>
+                        <td style="text-align: center; border: 1px solid black; padding: 5px;"></td>
+                        <td style="text-align: right; border: 1px solid black; padding: 5px;"></td>
                       </tr>
                       <tr>
                         <td colspan="5"><strong>AMOUNT (USD)</strong></td>
