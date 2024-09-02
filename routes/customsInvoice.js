@@ -3,6 +3,7 @@ const axios = require('axios');
 const router = express.Router();
 const { SHOPIFY_API_URL, ACCESS_TOKEN } = require('../shopifyConfig');
 const { generateCustomsInvoiceLineItemsHtml, generateInvoiceNumber, numberToWords } = require('../utils/helpers');
+
 router.get('/:orderId', async (req, res) => {
   const orderId = req.params.orderId;
 
@@ -23,6 +24,7 @@ router.get('/:orderId', async (req, res) => {
     });
 
     const { itemsHtml, grandTotal } = await generateCustomsInvoiceLineItemsHtml(order);
+
     let customsInvoiceHtml = `
       <html>
       <head>
@@ -70,209 +72,237 @@ router.get('/:orderId', async (req, res) => {
           <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
           <script>
             window.onload = function() {
-              document.getElementById('generatePdfButton').addEventListener('click', () => {
-                console.log("PDF GENERATING...");
-                const orderName = '${order.name}';
-                const recipientName = '${shippingAddress.name}';
-                const fileName = \`\${orderName} - \${recipientName}.pdf\`;
-                const invoiceContent = document.getElementById('printableInvoiceArea');
-                
-                // Wait for all images to be fully loaded
-                const images = invoiceContent.getElementsByTagName('img');
-                const imagePromises = Array.from(images).map(img => {
-                  return new Promise((resolve, reject) => {
-                    if (img.complete) {
-                      resolve();
+              // Ensure the button exists before adding an event listener
+              const createAWBButton = document.getElementById('createAWBButton');
+              if (createAWBButton) {
+                console.log("Create AWB button found, adding event listener.");
+
+                // Function to create AWB
+                createAWBButton.addEventListener('click', async () => {
+                  const orderId = '${orderId}';
+                  document.getElementById('loader').style.display = 'block';
+                  console.log("AWB creation initiated for orderId:", orderId);
+
+                  const packages = [];
+                  let hasInvalidPackage = false; // Flag to track if there's any invalid package
+
+                  document.querySelectorAll('.package-item').forEach(packageItem => {
+                    const weight = parseFloat(packageItem.querySelector('.package-weight').value) || 0;
+                    const length = parseFloat(packageItem.querySelector('.package-length').value) || 0;
+                    const width = parseFloat(packageItem.querySelector('.package-width').value) || 0;
+                    const height = parseFloat(packageItem.querySelector('.package-height').value) || 0;
+
+                    // Check if all fields are filled
+                    if (weight > 0 && length > 0 && width > 0 && height > 0) {
+                      // Only add complete packages
+                      packages.push({
+                        weight,
+                        dimensions: {
+                          length,
+                          width,
+                          height,
+                        }
+                      });
                     } else {
-                      img.onload = resolve;
-                      img.onerror = reject;
+                      hasInvalidPackage = true; // Mark as invalid if any field is missing
+                      packageItem.remove(); // Remove incomplete package from the UI
                     }
                   });
-                });
 
-                Promise.all(imagePromises)
-                  .then(() => {
-                    const options = {
-                      margin: 0.5,
-                      filename: fileName,
-                      image: { type: 'jpeg', quality: 0.98 },
-                      html2canvas: { scale: 2 },
-                      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-                    };
+                  if (hasInvalidPackage) {
+                    alert('Some packages were incomplete and have been removed. Please review your package details.');
+                    document.getElementById('loader').style.display = 'none';
+                  }
 
-                    html2pdf().from(invoiceContent).set(options).save();
-                  })
-                  .catch((error) => {
-                    console.error('Error loading images:', error);
-                    alert('Failed to load all images, please try again.');
-                  });
-              });
+                  if (packages.length === 0) {
+                    alert('No valid packages to send. Please add package details.');
+                    document.getElementById('loader').style.display = 'none';
+                    return;
+                  }
 
-              document.getElementById('createAWBButton').addEventListener('click', async () => {
-                const orderId = '${orderId}';
-                document.getElementById('loader').style.display = 'block';
-
-                const packages = [];
-                let hasInvalidPackage = false; // Flag to track if there's any invalid package
-
-                document.querySelectorAll('.package-item').forEach(packageItem => {
-                  const weight = parseFloat(packageItem.querySelector('.package-weight').value) || 0;
-                  const length = parseFloat(packageItem.querySelector('.package-length').value) || 0;
-                  const width = parseFloat(packageItem.querySelector('.package-width').value) || 0;
-                  const height = parseFloat(packageItem.querySelector('.package-height').value) || 0;
-
-                  // Check if all fields are filled
-                  if (weight > 0 && length > 0 && width > 0 && height > 0) {
-                    // Only add complete packages
-                    packages.push({
-                      weight,
-                      dimensions: {
-                        length,
-                        width,
-                        height,
-                      }
+                  try {
+                    // Fetch request to create a shipment
+                    const response = await fetch('/create-shipment', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json'
+                      },
+                      body: JSON.stringify({ orderId, packages })
                     });
-                  } else {
-                    hasInvalidPackage = true; // Mark as invalid if any field is missing
-                    packageItem.remove(); // Remove incomplete package from the UI
-                  }
-                });
 
-                if (hasInvalidPackage) {
-                  alert('Some packages were incomplete and have been removed. Please review your package details.');
-                  document.getElementById('loader').style.display = 'none';
-                }
+                    // Parse the response as JSON
+                    const result = await response.json();
+                    console.log("AWB response received:", result);
 
-                if (packages.length === 0) {
-                  alert('No valid packages to send. Please add package details.');
-                  document.getElementById('loader').style.display = 'none';
-                  return;
-                }
-                try {
-                  // Fetch request to create a shipment
-                  const response = await fetch('/create-shipment', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ orderId, packages })
-                  });
+                    if (response.ok && result.shipmentDetails && result.shipmentDetails.output) {
+                      const transactionShipments = result.shipmentDetails.output.transactionShipments;
 
-                  // Parse the response as JSON
-                  const result = await response.json();
-                  if (response.ok && result.shipmentDetails && result.shipmentDetails.output) {
-                    const transactionShipments = result.shipmentDetails.output.transactionShipments;
+                      if (transactionShipments && transactionShipments.length > 0) {
+                        // Extract the master tracking number (AWB number) from the first transaction shipment
+                        const awbNumber = transactionShipments[0].masterTrackingNumber;
+                        const labelUrl = result.shipmentDetails.labelUrl;
 
-                    if (transactionShipments && transactionShipments.length > 0) {
-                      // Extract the master tracking number (AWB number) from the first transaction shipment
-                      const awbNumber = transactionShipments[0].masterTrackingNumber;
-                      const labelUrl = result.shipmentDetails.labelUrl;
-
-                      if (awbNumber && labelUrl) {
-                        alert('AWB created successfully! AWB Number: ' + awbNumber);
-                        window.open(labelUrl, '_blank');
+                        if (awbNumber && labelUrl) {
+                          alert('AWB created successfully! AWB Number: ' + awbNumber);
+                          window.open(labelUrl, '_blank');
+                        } else {
+                          alert('Error: AWB number not found in the response.');
+                        }
                       } else {
-                        alert('Error: AWB number not found in the response.');
+                        alert('Error: Transaction shipments not found in the response.');
                       }
                     } else {
-                      alert('Error: Transaction shipments not found in the response.');
+                      // If the response is not OK, display the error
+                      alert('Error creating AWB: ' + (result.error || 'Unknown error'));
                     }
-                  } else {
-                    // If the response is not OK, display the error
-                    alert('Error creating AWB: ' + (result.error || 'Unknown error'));
-                  }
-                } catch (error) {
-                  // Catch any errors during the fetch or JSON parsing
-                  alert('Error creating AWB: ' + error.message);
+                  } catch (error) {
+                    // Catch any errors during the fetch or JSON parsing
+                    console.error('Error creating AWB:', error.message);
+                    alert('Error creating AWB: ' + error.message);
                   } finally {
                     // Hide the loader regardless of success or error
                     document.getElementById('loader').style.display = 'none';
                   }
-              });
-
-              document.getElementById('addPackageButton').addEventListener('click', function() {
-                const packageList = document.getElementById('packageList');
-                const listItem = document.createElement('li');
-                listItem.className = 'package-item';
-                
-                // Determine the serial number for the new package
-                const packageNumber = packageList.children.length + 1;
-
-                // Add input fields for weight and dimensions along with a remove button and serial number
-                listItem.innerHTML = \`
-                  <div style="margin-bottom: 10px; ">
-                  <span style="border: 1px solid #CCC; padding: 10px;">
-                    <label>Weight (kg):</label>
-                    <input type="number" class="package-weight" min="0" step="0.01" style="width: 60px;" required />
-                    <label>Length (cm):</label>
-                    <input type="number" class="package-length" min="0" style="width: 60px;" required />
-                    <label>Width (cm):</label>
-                    <input type="number" class="package-width" min="0" style="width: 60px;" required />
-                    <label>Height (cm):</label>
-                    <input type="number" class="package-height" min="0" style="width: 60px;" required />
-                    <button type="button" class="remove-package-button">Remove</button>
-                    </span>
-                  </div>
-                \`;
-                
-                // Append the new package item to the list
-                packageList.appendChild(listItem);
-
-                // Attach event listeners to the new input fields
-                listItem.querySelector('.package-weight').addEventListener('input', updateNetWeight);
-                listItem.querySelector('.remove-package-button').addEventListener('click', function() {
-                  // Remove this package item
-                  listItem.remove();
-                  
-                  // Update the number of packages and net weight
-                  updatePackageCount();
-                  updatePackageSerialNumbers(); // Update serial numbers after removing a package
                 });
+              } else {
+                console.error("Create AWB button not found.");
+              }
+                // Function to handle Add Package button click
+    const addPackageButton = document.getElementById('addPackageButton');
+    if (addPackageButton) {
+        console.log("Add Package button found, adding event listener.");
+        addPackageButton.addEventListener('click', function() {
+            const packageList = document.getElementById('packageList');
+            const listItem = document.createElement('li');
+            listItem.className = 'package-item';
 
-                // Update the number of packages
+            // Add input fields for weight and dimensions along with a remove button
+            listItem.innerHTML = \`
+                <div style="margin-bottom: 10px;">
+                    <span style="border: 1px solid #CCC; padding: 10px;">
+                        <label>Weight (kg):</label>
+                        <input type="number" class="package-weight" min="0" step="0.01" style="width: 60px;" required />
+                        <label>Length (cm):</label>
+                        <input type="number" class="package-length" min="0" style="width: 60px;" required />
+                        <label>Width (cm):</label>
+                        <input type="number" class="package-width" min="0" style="width: 60px;" required />
+                        <label>Height (cm):</label>
+                        <input type="number" class="package-height" min="0" style="width: 60px;" required />
+                        <button type="button" class="remove-package-button">Remove</button>
+                    </span>
+                </div>
+            \`;
+
+            // Append the new package item to the list
+            packageList.appendChild(listItem);
+
+            // Attach event listeners to the new input fields
+            listItem.querySelector('.package-weight').addEventListener('input', updateNetWeight);
+            listItem.querySelector('.remove-package-button').addEventListener('click', function() {
+                // Remove this package item
+                listItem.remove();
+                
+                // Update the number of packages and net weight
                 updatePackageCount();
-              });
+            });
+
+            // Update the number of packages
+            updatePackageCount();
+        });
+    } else {
+        console.error("Add Package button not found.");
+    }
+
+    document.getElementById('generatePdfButton').addEventListener('click', () => {
+        console.log("PDF GENERATING...");
+
+        // Retrieve order and customer names
+        const orderName = '${order.name}';
+        const customerName = '${shippingAddress.name}';
+
+        // Define the file name using the pattern: orderName-customerName.pdf
+        const fileName = \`\${orderName}-\${customerName}.pdf\`;
+
+        // Get the content to be converted into PDF
+        const invoiceContent = document.getElementById('printableInvoiceArea');
+
+        // Ensure all images are fully loaded before generating PDF
+        const images = invoiceContent.getElementsByTagName('img');
+        const imagePromises = Array.from(images).map(img => {
+            return new Promise((resolve, reject) => {
+                if (img.complete) {
+                    resolve();
+                } else {
+                    img.onload = resolve;
+                    img.onerror = reject;
+                }
+            });
+        });
+
+        // Wait for all images to load before creating PDF
+        Promise.all(imagePromises)
+            .then(() => {
+                const options = {
+                    margin: 0.5,
+                    filename: fileName,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2 },
+                    jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+                };
+
+                // Convert content to PDF and download
+                html2pdf().from(invoiceContent).set(options).save();
+            })
+            .catch((error) => {
+                console.error('Error loading images:', error);
+                alert('Failed to load all images, please try again.');
+            });
+    });
 
 
     // Function to update the number of packages
     function updatePackageCount() {
-      const numberOfPackages = document.querySelectorAll('.package-item').length;
-      document.getElementsByName("noOfPackages")[0].value = numberOfPackages;
+        const numberOfPackages = document.querySelectorAll('.package-item').length;
+        document.getElementsByName("noOfPackages")[0].value = numberOfPackages;
 
-      // Update the net weight
-      updateNetWeight();
+        // Update the net weight
+        updateNetWeight();
     }
 
     // Function to update the net weight
     function updateNetWeight() {
-      const packageWeights = document.querySelectorAll('.package-weight');
-      let totalWeight = 0;
-      packageWeights.forEach(input => {
-        totalWeight += parseFloat(input.value) || 0;
-      });
-      document.getElementsByName("netWeight")[0].value = totalWeight.toFixed(2);
-       const numberOfPackages = document.querySelectorAll('.package-item').length;
-       const grossWeight = totalWeight + (numberOfPackages * 0.25);
-       document.getElementsByName("grossWeight")[0].value = grossWeight.toFixed(2);
+        const packageWeights = document.querySelectorAll('.package-weight');
+        let totalWeight = 0;
+        packageWeights.forEach(input => {
+            totalWeight += parseFloat(input.value) || 0;
+        });
+        document.getElementsByName("netWeight")[0].value = totalWeight.toFixed(2);
+        const numberOfPackages = document.querySelectorAll('.package-item').length;
+        const grossWeight = totalWeight + (numberOfPackages * 0.25);
+        document.getElementsByName("grossWeight")[0].value = grossWeight.toFixed(2);
     }
+
+    // Initial call to set package count and weight on load
+    updatePackageCount();
+
+     // Function to validate and print invoice
+    function validateAndPrint() {
+      const grossWeight = document.getElementsByName("grossWeight")[0].value;
+      const netWeight = document.getElementsByName("netWeight")[0].value;
+      const noOfPackages = document.getElementsByName("noOfPackages")[0].value;
+
+      if (grossWeight === "" || netWeight === "" || noOfPackages === "") {
+        alert("Please fill in all fields before printing the invoice.");
+      } else {
+        window.print();
+      }
+    }
+
+    // Event listener for Print Invoice button
+    document.querySelector('button[onClick="validateAndPrint()"]').addEventListener('click', validateAndPrint);
             };
-
-
           </script>
-          
-          <script>
-              function validateAndPrint() {
-                  const grossWeight = document.getElementsByName("grossWeight")[0].value;
-                  const netWeight = document.getElementsByName("netWeight")[0].value;
-                  const noOfPackages = document.getElementsByName("noOfPackages")[0].value;
 
-                  if (grossWeight === "" || netWeight === "" || noOfPackages === "") {
-                      alert("Please fill in all fields before printing the invoice.");
-                  } else {
-                      window.print();
-                  }
-              }
-          </script>
       </head>
       <body>
           <div class="actions-div">
@@ -436,86 +466,6 @@ router.get('/:orderId', async (req, res) => {
       <div id="loader" style="display: none;">
         <div class="spinner"></div>
       </div>
-       <script>
-          function addRow() {
-    const tbody = document.getElementById('invoiceItems');
-    const row = document.createElement('tr');
-
-    row.innerHTML = \`
-      <td class="remove-row-button" style="width: 5%; text-align: left; border: 1px solid black; padding: 5px;">
-        <button style="position: relative; left: -100px;" contentEditable="false">Remove</button>
-      </td>
-      <td style="width: 50%; text-align: left; border: 1px solid black; padding: 5px;">
-        <input type="text" class="product-name" style="width: 100% !important;" />
-      </td>
-      <td style="width: 10%; text-align: center; border: 1px solid black; padding: 5px;">
-        <span class="product-hsn">&nbsp;</span>
-      </td>
-      <td style="width: 5%; text-align: center; border: 1px solid black; padding: 5px;">
-        <span class="product-quantity">&nbsp;</span>
-      </td>
-      <td style="width: 15%; text-align: center; border: 1px solid black; padding: 5px;">
-        <span class="product-rate">&nbsp;</span>
-      </td>
-      <td style="width: 15%; text-align: right; border: 1px solid black; padding: 5px;">
-        $<span class="product-amount">0.00</span>
-      </td>
-    \`;
-
-    tbody.appendChild(row);
-
-    // Attach event listeners to the new row inputs
-    row.querySelector('.product-quantity').addEventListener('input', calculateTotalAmount);
-    row.querySelector('.product-rate').addEventListener('input', calculateTotalAmount);
-    row.querySelector('button').addEventListener('click', () => {
-      row.remove();
-      calculateTotalAmount();
-    });
-
-    calculateTotalAmount(); // Recalculate total amount after adding a new row
-  }
-
-  // Function to calculate the total amount
-  function calculateTotalAmount() {
-    let totalAmount = 0;
-
-    // Select all table rows in the tbody
-    const rows = document.querySelectorAll('.invoice-items-table tbody tr');
-
-    // Iterate through each row
-    rows.forEach(row => {
-      // Get quantity and rate inputs
-      const quantityInput = row.querySelector('.product-quantity');
-      const rateInput = row.querySelector('.product-rate');
-
-      // Check if both inputs exist
-      if (quantityInput && rateInput) {
-        const quantity = parseFloat(quantityInput.value) || 0;
-        const rate = parseFloat(rateInput.value) || 0;
-
-        // Calculate amount for the row
-        const amount = quantity * rate;
-
-        // Update the amount cell
-        row.querySelector('.product-amount').textContent = amount.toFixed(2);
-
-        // Add to the total amount
-        totalAmount += amount;
-      }
-    });
-
-    // Update the total amount in the designated element
-  }
-
-  // Event listener for the Add Product button
-  document.getElementById('addRowButton').addEventListener('click', addRow);
-
-  // Initial call to calculate the total amount on page load
-  window.onload = function() {
-    calculateTotalAmount();
-  };
-
-        </script>       
       </body>
       </html>`;
 

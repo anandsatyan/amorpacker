@@ -57,11 +57,16 @@ async function createShipment(order, lineItemsForAWB, packages) {
     const formattedLineItems = convertLineItemsForFedEx(lineItemsForAWB);
     console.log("formattedLineItems");
     console.log(formattedLineItems);
-
+    console.log("order is");
+    console.log(order);
     try {
         // Extract shipping information from the Shopify order
         const shippingAddress = order.shipping_address || order.billing_address;
+        // Conditionally include stateOrProvinceCode based on the country
+        let stateOrProvinceCode = shippingAddress.province || '';
+        
 
+        console.log("state code is ", stateOrProvinceCode);
         // Construct the payload for the shipping carrier API (FedEx/Aramex, etc.)
         const payload = {
             "accountNumber": {
@@ -101,7 +106,7 @@ async function createShipment(order, lineItemsForAWB, packages) {
                                 shippingAddress.address2 || ''
                             ],
                             "city": shippingAddress.city,
-                            "stateOrProvinceCode": shippingAddress.province || '',
+                            "stateOrProvinceCode": shippingAddress.province_code || '',
                             "postalCode": shippingAddress.zip,
                             "countryCode": shippingAddress.country_code
                         }
@@ -156,7 +161,10 @@ async function createShipment(order, lineItemsForAWB, packages) {
                     }
                 })),
                 "serviceType": "INTERNATIONAL_PRIORITY",
-                "packagingType": "YOUR_PACKAGING"
+                "packagingType": "YOUR_PACKAGING",
+                "processingOptions": {
+                    "processingType": "DRAFT"
+                  }
                 // TODO: add shipment reference number (order number), PO No (order number), Invoice number is BEX/24-25/0005 BEX/Year/Incremental invoice number , Department No is CS5/G/CIF/U/-/-/0/310824 last six digits are ddmmyy of the date invoice was generated/finalized.
                 // TODO: Check if invoice can be attached 
                 // TODO: Give download facility for customs invoice - naming convention - CustomerName-OrderNo-InvoiceNoSuffix
