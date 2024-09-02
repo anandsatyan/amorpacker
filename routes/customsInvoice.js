@@ -218,16 +218,18 @@ router.get('/:orderId', async (req, res) => {
               <table class="invoice-items-table">
                   <thead>
                       <tr>
-                          <th style="width: 45%;">Description of Goods</th>
+                          <th style="width: 5%; text-align: center;">&nbsp;</th>
+                          <th style="width: 50%;">Description of Goods</th>
                           <th style="width: 10%; text-align: center;">HSN</th>
-                          <th style="width: 10%; text-align: center;">Quantity</th>
+                          <th style="width: 5%; text-align: center;">Qty</th>
                           <th style="width: 15%; text-align: center;">Rate (USD)</th>
-                          <th style="width: 20%; text-align: right;">Amount (USD)</th>
+                          <th style="width: 15%; text-align: right;">Amount (USD)</th>
                       </tr>
                   </thead>
                   <tbody>
                       ${itemsHtml}
                       <tr>
+                        <td></td>
                         <td><strong></strong></td>
                         <td></td>
                         <td></td>
@@ -235,14 +237,14 @@ router.get('/:orderId', async (req, res) => {
                         <td></td>
                       </tr>
                       <tr>
-                        <td colspan="4"><strong>AMOUNT</strong></td>
+                        <td colspan="5"><strong>AMOUNT</strong></td>
                         <td style="text-align: right; font-weight: bold;">$${grandTotal.toFixed(2)}</td>
                       </tr>
                       <tr>
-                        <td colspan="5" style="text-transform: uppercase"><strong>AMOUNT IN WORDS: ${numberToWords(grandTotal.toFixed(2))}</strong></td>
+                        <td colspan="6" style="text-transform: uppercase"><strong>AMOUNT IN WORDS: ${numberToWords(grandTotal.toFixed(2))}</strong></td>
                       </tr>
                       <tr>
-                        <td colspan="5"><center>Declaration: The value declared is for customs purpose only.</center></td>
+                        <td colspan="6"><center>Declaration: The value declared is for customs purpose only.</center></td>
                       </tr>
                   </tbody>
               </table>

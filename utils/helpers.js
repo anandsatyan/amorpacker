@@ -459,6 +459,9 @@ async function generateCustomsInvoiceLineItemsHtml(order) {
             const item = aggregatedItems[key];
             itemsHtml += `
                 <tr>
+                    <td style="width: 5%; text-align: left; border: 1px solid black; padding: 5px;">
+                        &nbsp;
+                    </td>
                     <td style="width: 45%; text-align: left; border: 1px solid black; padding: 5px;">
                         <strong>${item.name}</strong>
                     </td>
