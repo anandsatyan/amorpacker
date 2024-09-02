@@ -248,7 +248,7 @@ router.get('/:orderId', async (req, res) => {
               </table>
           </div>
 
-          <div style="text-align: right;">
+          <div style="text-align: right; position: relative; top: -80px; right: 40px">
               <img src="https://cdn.shopify.com/s/files/1/0857/0984/8873/files/BRANDSAMOR_COMMERCE_L.L.P..png?v=1722773361" width="150px" />
           </div>
       </body>
