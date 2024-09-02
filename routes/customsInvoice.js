@@ -244,7 +244,10 @@ router.get('/:orderId', async (req, res) => {
                         <td colspan="6" style="text-transform: uppercase"><strong>AMOUNT IN WORDS: ${numberToWords(grandTotal.toFixed(2))}</strong></td>
                       </tr>
                       <tr>
-                        <td colspan="6"><center>Declaration: The value declared is for customs purpose only.</center></td>
+                        <td colspan="6"><center><strong>Declaration : This invoice is for customs purpose only. We declare that invoice shows the actual price of goods described and that all particulars are true & correct.</strong></center></td>
+                      </tr>
+                      <tr>
+                        <td colspan="6"><center>Note: Invoice is digitally signed and manual signature is not required</center></td>
                       </tr>
                   </tbody>
               </table>
