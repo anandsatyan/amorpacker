@@ -40,12 +40,13 @@ router.post('/', async (req, res) => {
 
         const order = response.data.order;
         const { itemsHtml, grandTotal, lineItemsForAWB } = await generateCustomsInvoiceLineItemsHtml(order);
-
+        
         // Create shipment using line items for AWB
         const shipmentResponse = await createShipment(order, lineItemsForAWB);
+        console.log("***************shipmentResponse****************");
         res.json({ message: 'AWB created successfully!', shipmentDetails: shipmentResponse });
     } catch (error) {
-        console.error("Error creating shipment:", error.message);
+        console.error("Error creating shipment ! :", error.message);
         res.status(500).json({ error: error.message });
     }
 });

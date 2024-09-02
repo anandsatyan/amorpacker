@@ -83,28 +83,44 @@ router.get('/:orderId', async (req, res) => {
               });
 
               document.getElementById('createAWBButton').addEventListener('click', async () => {
-                const orderId = '${orderId}';
-                try {
-                  const response = await fetch('/create-shipment', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ orderId })
-                  });
-                  const result = await response.json();
-                  const transactionShipment = result.output?.transactionShipments?.[0];
-                  const awbNumber = transactionShipment?.completedShipmentDetail?.masterTrackingId?.trackingNumber;
+  const orderId = '${orderId}';
+  try {
+    // Fetch request to create a shipment
+    const response = await fetch('/create-shipment', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ orderId })
+    });
 
-                  if (response.ok && awbNumber) {
-                    alert('AWB created successfully! AWB Number: ' + awbNumber);
-                  } else {
-                    alert('Error creating AWB: ' + (result.error || 'Unknown error'));
-                  }
-                } catch (error) {
-                  alert('Error creating AWB: ' + error.message);
-                }
-              });
+    // Parse the response as JSON
+    const result = await response.json();
+     if (response.ok && result.shipmentDetails && result.shipmentDetails.output) {
+      const transactionShipments = result.shipmentDetails.output.transactionShipments;
+
+      if (transactionShipments && transactionShipments.length > 0) {
+        // Extract the master tracking number (AWB number) from the first transaction shipment
+        const awbNumber = transactionShipments[0].masterTrackingNumber;
+
+        if (awbNumber) {
+          alert('AWB created successfully! AWB Number: ' + awbNumber);
+        } else {
+          alert('Error: AWB number not found in the response.');
+        }
+      } else {
+        alert('Error: Transaction shipments not found in the response.');
+      }
+    } else {
+      // If the response is not OK, display the error
+      alert('Error creating AWB: ' + (result.error || 'Unknown error'));
+    }
+  } catch (error) {
+    // Catch any errors during the fetch or JSON parsing
+    alert('Error creating AWB: ' + error.message);
+  }
+});
+
             };
           </script>
           <script>
