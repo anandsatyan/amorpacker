@@ -458,23 +458,23 @@ async function generateCustomsInvoiceLineItemsHtml(order) {
         for (const key in aggregatedItems) {
             const item = aggregatedItems[key];
             itemsHtml += `
-                <div class="flex-line-item" style="display: flex; justify-content: space-between;">
-                    <div style="width: 45%; text-align: left;">
-                        <span><strong>${item.name}</strong></span>
-                    </div>
-                    <div style="width: 10%; text-align: center;">
-                        <span>${item.hsCode}</span>
-                    </div>
-                    <div style="width: 10%; text-align: center;">
-                        <span>${item.quantity}</span>
-                    </div>
-                    <div style="width: 15%; text-align: center;">
-                        <span>$${item.unitPrice.toFixed(2)}</span>
-                    </div>
-                    <div style="width: 20%; text-align: right;">
-                        <span>$${item.totalPrice.toFixed(2)}</span>
-                    </div>
-                </div>`;
+                <tr>
+                    <td style="width: 45%; text-align: left; border: 1px solid black; padding: 5px;">
+                        <strong>${item.name}</strong>
+                    </td>
+                    <td style="width: 10%; text-align: center; border: 1px solid black; padding: 5px;">
+                        ${item.hsCode}
+                    </td>
+                    <td style="width: 10%; text-align: center; border: 1px solid black; padding: 5px;">
+                        ${item.quantity}
+                    </td>
+                    <td style="width: 15%; text-align: center; border: 1px solid black; padding: 5px;">
+                        $${item.unitPrice.toFixed(2)}
+                    </td>
+                    <td style="width: 20%; text-align: right; border: 1px solid black; padding: 5px;">
+                        $${item.totalPrice.toFixed(2)}
+                    </td>
+                </tr>`;
             grandTotal += item.totalPrice;
         }
 
@@ -489,6 +489,69 @@ async function generateCustomsInvoiceLineItemsHtml(order) {
     }
 }
 
+function numberToWords(num) {
+    if (num === 0) return 'zero';
+
+    const belowTwenty = [
+        'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
+        'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen',
+        'eighteen', 'nineteen'
+    ];
+
+    const tens = [
+        '', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'
+    ];
+
+    const thousands = ['', 'thousand', 'million', 'billion'];
+
+    function convertBelowThousand(num) {
+        let result = '';
+
+        if (num >= 100) {
+            result += belowTwenty[Math.floor(num / 100)] + ' hundred ';
+            num %= 100;
+        }
+
+        if (num >= 20) {
+            result += tens[Math.floor(num / 10)] + ' ';
+            num %= 10;
+        }
+
+        if (num > 0) {
+            result += belowTwenty[num] + ' ';
+        }
+
+        return result.trim();
+    }
+
+    function convertToWords(num) {
+        let result = '';
+        let thousandIndex = 0;
+
+        while (num > 0) {
+            if (num % 1000 !== 0) {
+                result = convertBelowThousand(num % 1000) + (thousandIndex > 0 ? ' ' + thousands[thousandIndex] + ' ' : '') + result;
+            }
+
+            num = Math.floor(num / 1000);
+            thousandIndex++;
+        }
+
+        return result.trim();
+    }
+
+    // Split the number into whole and fractional parts
+    const wholePart = Math.floor(num);
+    const fractionalPart = Math.round((num - wholePart) * 100);
+
+    let result = 'USD ' + convertToWords(wholePart);
+
+    if (fractionalPart > 0) {
+        result += ' and cents ' + convertToWords(fractionalPart);
+    }
+
+    return result;
+}
   
 
 module.exports = {
@@ -500,5 +563,6 @@ module.exports = {
     generateLineItemHtml,
     addComponentsForSampleItem,
     generateCustomsInvoiceLineItemsHtml,
-    generateInvoiceNumber,  // Ensure this is exported
+    generateInvoiceNumber,  
+    numberToWords
 };
