@@ -462,8 +462,8 @@ async function generateCustomsInvoiceLineItemsHtml(order) {
             const item = aggregatedItems[key];
             itemsHtml += `
                 <tr>
-                    <td style="width: 5%; text-align: left; border: 1px solid black; padding: 5px;">
-                        &nbsp;
+                    <td class="remove-row-button" style="width: 5%; text-align: left; border: 1px solid black; padding: 5px;">
+                        <button style="position: relative; left: -100px;" contentEditable="false">Remove</button>
                     </td>
                     <td style="width: 45%; text-align: left; border: 1px solid black; padding: 5px;">
                         <strong>${item.name}</strong>

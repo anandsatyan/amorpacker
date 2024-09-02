@@ -340,7 +340,14 @@ router.get('/:orderId', async (req, res) => {
 
                 calculateTotalAmount(); // Recalculate the total amount after adding a new row
               }
-
+              function attachRemoveListeners() {
+                document.querySelectorAll('.remove-row-button button').forEach(button => {
+                  button.addEventListener('click', function () {
+                    this.closest('tr').remove();
+                    calculateTotalAmount();
+                  });
+                });
+              }
               // Function to calculate the total amount
               function calculateTotalAmount() {
                 let totalAmount = 0;
@@ -376,7 +383,7 @@ router.get('/:orderId', async (req, res) => {
 
               // Event listener for the Add Line Item button
               document.getElementById('addRowButton').addEventListener('click', addLineItem);
-
+              attachRemoveListeners();
               // Initial call to calculate the total amount on page load
               calculateTotalAmount();
             };
