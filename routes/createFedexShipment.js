@@ -29,7 +29,7 @@ async function fetchCarrierAccessToken() {
 
 // Route to create FedEx shipment
 router.post('/', async (req, res) => {
-    const { orderId } = req.body;
+    const { orderId, packages } = req.body;  // Receive packages data from the client
     try {
         // Fetch order details from Shopify
         const response = await axios.get(`${SHOPIFY_API_URL}/orders/${orderId}.json`, {
@@ -41,8 +41,8 @@ router.post('/', async (req, res) => {
         const order = response.data.order;
         const { itemsHtml, grandTotal, lineItemsForAWB } = await generateCustomsInvoiceLineItemsHtml(order);
         
-        // Create shipment using line items for AWB
-        const shipmentResponse = await createShipment(order, lineItemsForAWB);
+        // Create shipment using line items for AWB and package details
+        const shipmentResponse = await createShipment(order, lineItemsForAWB, packages); // Pass packages to the createShipment function
         console.log("***************shipmentResponse****************");
         res.json({ message: 'AWB created successfully!', shipmentDetails: shipmentResponse });
     } catch (error) {
@@ -51,8 +51,9 @@ router.post('/', async (req, res) => {
     }
 });
 
+
 // Function to create FedEx shipment
-async function createShipment(order, lineItemsForAWB) {
+async function createShipment(order, lineItemsForAWB, packages) {
     const formattedLineItems = convertLineItemsForFedEx(lineItemsForAWB);
     console.log("formattedLineItems");
     console.log(formattedLineItems);
@@ -141,16 +142,16 @@ async function createShipment(order, lineItemsForAWB) {
                 "rateRequestTypes": [
                     "ACCOUNT"
                 ],
-                "packageCount": formattedLineItems.length,
-                "requestedPackageLineItems": formattedLineItems.map(item => ({
+                "packageCount": packages.length,
+                "requestedPackageLineItems": packages.map(pkg => ({
                     "weight": {
                         "units": "KG",
-                        "value": 0.5
+                        "value": pkg.weight
                     },
                     "dimensions": {
-                        "length": 10, // Replace with actual length
-                        "width": 10,  // Replace with actual width
-                        "height": 10, // Replace with actual height
+                        "length": pkg.dimensions.length,
+                        "width": pkg.dimensions.width,
+                        "height": pkg.dimensions.height,
                         "units": "CM"
                     }
                 })),

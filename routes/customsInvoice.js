@@ -38,7 +38,7 @@ router.get('/:orderId', async (req, res) => {
                   background-color: #ffffff; font-weight: bold;
               }
               .invoice-title { text-align: center; font-size: 20px; font-weight: bold; padding: 10px 0; }
-              input[type="text"] {border: 0 !important; max-width: 40px;}
+              input[type="text"], input[type="number"] {border: 0 !important; max-width: 40px;}
               .actions-div { text-align: center; border-bottom: 1px solid #000; padding-bottom: 20px; }
               @media print { .actions-div { display:none; } }
           </style>
@@ -83,45 +83,147 @@ router.get('/:orderId', async (req, res) => {
               });
 
               document.getElementById('createAWBButton').addEventListener('click', async () => {
-  const orderId = '${orderId}';
-  try {
-    // Fetch request to create a shipment
-    const response = await fetch('/create-shipment', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ orderId })
-    });
+                const orderId = '${orderId}';
+                const packages = [];
+                let hasInvalidPackage = false; // Flag to track if there's any invalid package
 
-    // Parse the response as JSON
-    const result = await response.json();
-     if (response.ok && result.shipmentDetails && result.shipmentDetails.output) {
-      const transactionShipments = result.shipmentDetails.output.transactionShipments;
+                document.querySelectorAll('.package-item').forEach(packageItem => {
+                  const weight = parseFloat(packageItem.querySelector('.package-weight').value) || 0;
+                  const length = parseFloat(packageItem.querySelector('.package-length').value) || 0;
+                  const width = parseFloat(packageItem.querySelector('.package-width').value) || 0;
+                  const height = parseFloat(packageItem.querySelector('.package-height').value) || 0;
 
-      if (transactionShipments && transactionShipments.length > 0) {
-        // Extract the master tracking number (AWB number) from the first transaction shipment
-        const awbNumber = transactionShipments[0].masterTrackingNumber;
+                  // Check if all fields are filled
+                  if (weight > 0 && length > 0 && width > 0 && height > 0) {
+                    // Only add complete packages
+                    packages.push({
+                      weight,
+                      dimensions: {
+                        length,
+                        width,
+                        height,
+                      }
+                    });
+                  } else {
+                    hasInvalidPackage = true; // Mark as invalid if any field is missing
+                    packageItem.remove(); // Remove incomplete package from the UI
+                  }
+                });
 
-        if (awbNumber) {
-          alert('AWB created successfully! AWB Number: ' + awbNumber);
-        } else {
-          alert('Error: AWB number not found in the response.');
-        }
-      } else {
-        alert('Error: Transaction shipments not found in the response.');
-      }
-    } else {
-      // If the response is not OK, display the error
-      alert('Error creating AWB: ' + (result.error || 'Unknown error'));
-    }
-  } catch (error) {
-    // Catch any errors during the fetch or JSON parsing
-    alert('Error creating AWB: ' + error.message);
-  }
+                if (hasInvalidPackage) {
+                  alert('Some packages were incomplete and have been removed. Please review your package details.');
+                }
+
+                if (packages.length === 0) {
+                  alert('No valid packages to send. Please add package details.');
+                  return;
+                }
+                try {
+                  // Fetch request to create a shipment
+                  const response = await fetch('/create-shipment', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ orderId, packages })
+                  });
+
+                  // Parse the response as JSON
+                  const result = await response.json();
+                  if (response.ok && result.shipmentDetails && result.shipmentDetails.output) {
+                    const transactionShipments = result.shipmentDetails.output.transactionShipments;
+
+                    if (transactionShipments && transactionShipments.length > 0) {
+                      // Extract the master tracking number (AWB number) from the first transaction shipment
+                      const awbNumber = transactionShipments[0].masterTrackingNumber;
+
+                      if (awbNumber) {
+                        alert('AWB created successfully! AWB Number: ' + awbNumber);
+                      } else {
+                        alert('Error: AWB number not found in the response.');
+                      }
+                    } else {
+                      alert('Error: Transaction shipments not found in the response.');
+                    }
+                  } else {
+                    // If the response is not OK, display the error
+                    alert('Error creating AWB: ' + (result.error || 'Unknown error'));
+                  }
+                } catch (error) {
+                  // Catch any errors during the fetch or JSON parsing
+                  alert('Error creating AWB: ' + error.message);
+                }
+              });
+// New Code: Adding functionality to handle adding packages
+    document.getElementById('addPackageButton').addEventListener('click', function() {
+  // Create new list item for the package
+  const packageList = document.getElementById('packageList');
+  const listItem = document.createElement('li');
+  listItem.className = 'package-item';
+  
+  // Determine the serial number for the new package
+  const packageNumber = packageList.children.length + 1;
+
+  // Add input fields for weight and dimensions along with a remove button and serial number
+  listItem.innerHTML = \`
+    <div style="margin-bottom: 10px; ">
+    <span style="border: 1px solid #CCC; padding: 10px;">
+      <label>Weight (kg):</label>
+      <input type="number" class="package-weight" min="0" step="0.01" style="width: 60px;" required />
+      <label>Length (cm):</label>
+      <input type="number" class="package-length" min="0" style="width: 60px;" required />
+      <label>Width (cm):</label>
+      <input type="number" class="package-width" min="0" style="width: 60px;" required />
+      <label>Height (cm):</label>
+      <input type="number" class="package-height" min="0" style="width: 60px;" required />
+      <button type="button" class="remove-package-button">Remove</button>
+      </span>
+    </div>
+  \`;
+  
+  // Append the new package item to the list
+  packageList.appendChild(listItem);
+
+  // Attach event listeners to the new input fields
+  listItem.querySelector('.package-weight').addEventListener('input', updateNetWeight);
+  listItem.querySelector('.remove-package-button').addEventListener('click', function() {
+    // Remove this package item
+    listItem.remove();
+    
+    // Update the number of packages and net weight
+    updatePackageCount();
+    updatePackageSerialNumbers(); // Update serial numbers after removing a package
+  });
+
+  // Update the number of packages
+  updatePackageCount();
 });
 
+
+    // Function to update the number of packages
+    function updatePackageCount() {
+      const numberOfPackages = document.querySelectorAll('.package-item').length;
+      document.getElementsByName("noOfPackages")[0].value = numberOfPackages;
+
+      // Update the net weight
+      updateNetWeight();
+    }
+
+    // Function to update the net weight
+    function updateNetWeight() {
+      const packageWeights = document.querySelectorAll('.package-weight');
+      let totalWeight = 0;
+      packageWeights.forEach(input => {
+        totalWeight += parseFloat(input.value) || 0;
+      });
+      document.getElementsByName("netWeight")[0].value = totalWeight.toFixed(2);
+       const numberOfPackages = document.querySelectorAll('.package-item').length;
+       const grossWeight = totalWeight + (numberOfPackages * 0.25);
+       document.getElementsByName("grossWeight")[0].value = grossWeight.toFixed(2);
+    }
             };
+
+
           </script>
           <script>
               function validateAndPrint() {
@@ -142,9 +244,17 @@ router.get('/:orderId', async (req, res) => {
             <button id="createAWBButton">Create Fedex AWB</button>
             <button onClick="validateAndPrint()">Print Invoice</button>
             <button id="generatePdfButton">Download PDF</button>
-          </div>
+          
+            <br />
+              <ul id="packageList" class="package-list" style="margin-top: 20px; list-style-type: none; padding: 0;margin-left: auto; margin-right: auto;">
+                <!-- Dynamic package items will be added here -->
+              </ul><br />
+              <div class="package-management" style="text-align: center;">
+                <button id="addPackageButton">Add Package</button>
+              </div>
+            </div>
           <br /><br />
-          <div id="printableInvoiceArea" class="wrapper invoice-container">
+          <div id="printableInvoiceArea" class="wrapper invoice-container" contentEditable="true">
               <!-- First Table (Header Information) -->
               <table class="invoice-header-table">
                   <tr><td colspan="3" class="invoice-title"><center>INVOICE</center></td></tr>
@@ -210,7 +320,7 @@ router.get('/:orderId', async (req, res) => {
                           <strong>Buyer (if other than consignee)</strong><br><br>
                           <strong>Gross Wt:</strong> <input type="text" name="grossWeight" /> kg<br>
                           <strong>Net Wt:</strong> <input type="text" name="netWeight" /> kg <br>
-                          <strong>No. of Pkgs:</strong><input type="text" name="noOfPackages" />
+                          <strong>No. of Pkgs:</strong><input type="number" name="noOfPackages" />
                       </td>
                   </tr>
                   <tr>
