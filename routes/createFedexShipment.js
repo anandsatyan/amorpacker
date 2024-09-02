@@ -171,9 +171,8 @@ async function createShipment(order, lineItemsForAWB, packages) {
             }
         });
         console.log(response);
-
-        // Process carrier response
-        return response.data;
+        const labelUrl = response.data.output.transactionShipments[0].pieceResponses[0].packageDocuments[0].url;
+        return { ...response.data, labelUrl };
     } catch (error) {
         console.error("Error creating shipment:", JSON.stringify(error.response.data, null, 2));
         throw error;

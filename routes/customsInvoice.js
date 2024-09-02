@@ -41,6 +41,32 @@ router.get('/:orderId', async (req, res) => {
               input[type="text"], input[type="number"] {border: 0 !important; max-width: 40px;}
               .actions-div { text-align: center; border-bottom: 1px solid #000; padding-bottom: 20px; }
               @media print { .actions-div { display:none; } }
+              #loader {
+                position: fixed;
+                top: 10px;  /* Adjust as needed */
+                right: 10px;  /* Adjust as needed */
+                z-index: 9999;
+              }
+
+              /* Spinner style */
+              .spinner {
+                border: 4px solid rgba(0, 0, 0, 0.1);
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                border-left-color: #000;
+                animation: spin 1s linear infinite;
+              }
+
+              /* Keyframes for spinner animation */
+              @keyframes spin {
+                0% {
+                  transform: rotate(0deg);
+                }
+                100% {
+                  transform: rotate(360deg);
+                }
+              }
           </style>
           <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
           <script>
@@ -84,6 +110,8 @@ router.get('/:orderId', async (req, res) => {
 
               document.getElementById('createAWBButton').addEventListener('click', async () => {
                 const orderId = '${orderId}';
+                document.getElementById('loader').style.display = 'block';
+
                 const packages = [];
                 let hasInvalidPackage = false; // Flag to track if there's any invalid package
 
@@ -112,10 +140,12 @@ router.get('/:orderId', async (req, res) => {
 
                 if (hasInvalidPackage) {
                   alert('Some packages were incomplete and have been removed. Please review your package details.');
+                  document.getElementById('loader').style.display = 'none';
                 }
 
                 if (packages.length === 0) {
                   alert('No valid packages to send. Please add package details.');
+                  document.getElementById('loader').style.display = 'none';
                   return;
                 }
                 try {
@@ -136,9 +166,11 @@ router.get('/:orderId', async (req, res) => {
                     if (transactionShipments && transactionShipments.length > 0) {
                       // Extract the master tracking number (AWB number) from the first transaction shipment
                       const awbNumber = transactionShipments[0].masterTrackingNumber;
+                      const labelUrl = result.shipmentDetails.labelUrl;
 
-                      if (awbNumber) {
+                      if (awbNumber && labelUrl) {
                         alert('AWB created successfully! AWB Number: ' + awbNumber);
+                        window.open(labelUrl, '_blank');
                       } else {
                         alert('Error: AWB number not found in the response.');
                       }
@@ -152,7 +184,10 @@ router.get('/:orderId', async (req, res) => {
                 } catch (error) {
                   // Catch any errors during the fetch or JSON parsing
                   alert('Error creating AWB: ' + error.message);
-                }
+                  } finally {
+                    // Hide the loader regardless of success or error
+                    document.getElementById('loader').style.display = 'none';
+                  }
               });
 // New Code: Adding functionality to handle adding packages
     document.getElementById('addPackageButton').addEventListener('click', function() {
@@ -273,7 +308,7 @@ router.get('/:orderId', async (req, res) => {
                           DT: ${invoiceDate}
                       </td>
                       <td>
-                          <strong>AD Code:</strong> 202632<br>
+                          <strong>AD Code:</strong> 0202632<br>
                           <strong>GSTIN:</strong> 33ABCFB8402A1Z8
                       </td>
                   </tr>
@@ -401,8 +436,10 @@ router.get('/:orderId', async (req, res) => {
                   <img id="brandImage" src="https://cdn.shopify.com/s/files/1/0857/0984/8873/files/BRANDSAMOR_COMMERCE_L.L.P..png?v=1722773361" width="150px" />
               </div>
           </div>
-
-         
+      <div id="loader" style="display: none;">
+        <div class="spinner"></div>
+      </div>
+              
       </body>
       </html>`;
 
