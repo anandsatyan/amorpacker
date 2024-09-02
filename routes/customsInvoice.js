@@ -3,7 +3,6 @@ const axios = require('axios');
 const router = express.Router();
 const { SHOPIFY_API_URL, ACCESS_TOKEN } = require('../shopifyConfig');
 const { generateCustomsInvoiceLineItemsHtml, generateInvoiceNumber, numberToWords } = require('../utils/helpers');
-
 router.get('/:orderId', async (req, res) => {
   const orderId = req.params.orderId;
 
@@ -38,7 +37,7 @@ router.get('/:orderId', async (req, res) => {
                   background-color: #ffffff; font-weight: bold;
               }
               .invoice-title { text-align: center; font-size: 20px; font-weight: bold; padding: 10px 0; }
-              input[type="text"], input[type="number"] {border: 0 !important; max-width: 40px;}
+              input[type="text"], input[type="number"] {border: 0 !important; }
               .actions-div { text-align: center; border-bottom: 1px solid #000; padding-bottom: 20px; }
               @media print { .actions-div { display:none; } }
               #loader {
@@ -72,11 +71,12 @@ router.get('/:orderId', async (req, res) => {
           <script>
             window.onload = function() {
               document.getElementById('generatePdfButton').addEventListener('click', () => {
+                console.log("PDF GENERATING...");
                 const orderName = '${order.name}';
                 const recipientName = '${shippingAddress.name}';
                 const fileName = \`\${orderName} - \${recipientName}.pdf\`;
                 const invoiceContent = document.getElementById('printableInvoiceArea');
-
+                
                 // Wait for all images to be fully loaded
                 const images = invoiceContent.getElementsByTagName('img');
                 const imagePromises = Array.from(images).map(img => {
@@ -189,50 +189,49 @@ router.get('/:orderId', async (req, res) => {
                     document.getElementById('loader').style.display = 'none';
                   }
               });
-// New Code: Adding functionality to handle adding packages
-    document.getElementById('addPackageButton').addEventListener('click', function() {
-  // Create new list item for the package
-  const packageList = document.getElementById('packageList');
-  const listItem = document.createElement('li');
-  listItem.className = 'package-item';
-  
-  // Determine the serial number for the new package
-  const packageNumber = packageList.children.length + 1;
 
-  // Add input fields for weight and dimensions along with a remove button and serial number
-  listItem.innerHTML = \`
-    <div style="margin-bottom: 10px; ">
-    <span style="border: 1px solid #CCC; padding: 10px;">
-      <label>Weight (kg):</label>
-      <input type="number" class="package-weight" min="0" step="0.01" style="width: 60px;" required />
-      <label>Length (cm):</label>
-      <input type="number" class="package-length" min="0" style="width: 60px;" required />
-      <label>Width (cm):</label>
-      <input type="number" class="package-width" min="0" style="width: 60px;" required />
-      <label>Height (cm):</label>
-      <input type="number" class="package-height" min="0" style="width: 60px;" required />
-      <button type="button" class="remove-package-button">Remove</button>
-      </span>
-    </div>
-  \`;
-  
-  // Append the new package item to the list
-  packageList.appendChild(listItem);
+              document.getElementById('addPackageButton').addEventListener('click', function() {
+                const packageList = document.getElementById('packageList');
+                const listItem = document.createElement('li');
+                listItem.className = 'package-item';
+                
+                // Determine the serial number for the new package
+                const packageNumber = packageList.children.length + 1;
 
-  // Attach event listeners to the new input fields
-  listItem.querySelector('.package-weight').addEventListener('input', updateNetWeight);
-  listItem.querySelector('.remove-package-button').addEventListener('click', function() {
-    // Remove this package item
-    listItem.remove();
-    
-    // Update the number of packages and net weight
-    updatePackageCount();
-    updatePackageSerialNumbers(); // Update serial numbers after removing a package
-  });
+                // Add input fields for weight and dimensions along with a remove button and serial number
+                listItem.innerHTML = \`
+                  <div style="margin-bottom: 10px; ">
+                  <span style="border: 1px solid #CCC; padding: 10px;">
+                    <label>Weight (kg):</label>
+                    <input type="number" class="package-weight" min="0" step="0.01" style="width: 60px;" required />
+                    <label>Length (cm):</label>
+                    <input type="number" class="package-length" min="0" style="width: 60px;" required />
+                    <label>Width (cm):</label>
+                    <input type="number" class="package-width" min="0" style="width: 60px;" required />
+                    <label>Height (cm):</label>
+                    <input type="number" class="package-height" min="0" style="width: 60px;" required />
+                    <button type="button" class="remove-package-button">Remove</button>
+                    </span>
+                  </div>
+                \`;
+                
+                // Append the new package item to the list
+                packageList.appendChild(listItem);
 
-  // Update the number of packages
-  updatePackageCount();
-});
+                // Attach event listeners to the new input fields
+                listItem.querySelector('.package-weight').addEventListener('input', updateNetWeight);
+                listItem.querySelector('.remove-package-button').addEventListener('click', function() {
+                  // Remove this package item
+                  listItem.remove();
+                  
+                  // Update the number of packages and net weight
+                  updatePackageCount();
+                  updatePackageSerialNumbers(); // Update serial numbers after removing a package
+                });
+
+                // Update the number of packages
+                updatePackageCount();
+              });
 
 
     // Function to update the number of packages
@@ -260,6 +259,7 @@ router.get('/:orderId', async (req, res) => {
 
 
           </script>
+          
           <script>
               function validateAndPrint() {
                   const grossWeight = document.getElementsByName("grossWeight")[0].value;
@@ -353,9 +353,9 @@ router.get('/:orderId', async (req, res) => {
                       </td>
                       <td>
                           <strong>Buyer (if other than consignee)</strong><br><br>
-                          <strong>Gross Wt:</strong> <input type="text" name="grossWeight" /> kg<br>
-                          <strong>Net Wt:</strong> <input type="text" name="netWeight" /> kg <br>
-                          <strong>No. of Pkgs:</strong><input type="number" name="noOfPackages" />
+                          <strong>Gross Wt:</strong> <input type="text" name="grossWeight" style="max-width: 40px;" /> kg<br>
+                          <strong>Net Wt:</strong> <input type="text" name="netWeight" style="max-width: 40px;"/> kg <br>
+                          <strong>No. of Pkgs:</strong><input type="number" style="max-width: 40px;" name="noOfPackages" />
                       </td>
                   </tr>
                   <tr>
@@ -406,16 +406,10 @@ router.get('/:orderId', async (req, res) => {
                           <th style="width: 15%; text-align: right;">Amount</th>
                       </tr>
                   </thead>
-                  <tbody>
+                  <tbody id="invoiceItems">
                       ${itemsHtml}
-                      <tr>
-                        <td style="width: 5%; text-align: left; border: 1px solid black; padding: 5px;"></td>
-                        <td style="text-align: left; border: 1px solid black; padding: 5px; font-weight: bold"></td>
-                        <td style="text-align: center; border: 1px solid black; padding: 5px;"></td>
-                        <td style="text-align: center; border: 1px solid black; padding: 5px;"></td>
-                        <td style="text-align: center; border: 1px solid black; padding: 5px;"></td>
-                        <td style="text-align: right; border: 1px solid black; padding: 5px;"></td>
-                      </tr>
+                  </tbody>
+                  <tfoot>
                       <tr>
                         <td colspan="5"><strong>AMOUNT (USD)</strong></td>
                         <td style="text-align: right; font-weight: bold;">$${grandTotal.toFixed(2)}</td>
@@ -429,17 +423,99 @@ router.get('/:orderId', async (req, res) => {
                       <tr>
                         <td colspan="6"><center>Note: Invoice is digitally signed and manual signature is not required</center></td>
                       </tr>
-                  </tbody>
+                  </tfoot>
               </table>
              <!-- Image at the Bottom -->
               <div style="text-align: right; margin-top: -80px;">
                   <img id="brandImage" src="https://cdn.shopify.com/s/files/1/0857/0984/8873/files/BRANDSAMOR_COMMERCE_L.L.P..png?v=1722773361" width="150px" />
               </div>
           </div>
+          <div style="position:fixed; bottom: 10px; right: 10px;">
+              <button id="addRowButton">Add Line Item</button>
+          </div>
       <div id="loader" style="display: none;">
         <div class="spinner"></div>
       </div>
-              
+       <script>
+          function addRow() {
+    const tbody = document.getElementById('invoiceItems');
+    const row = document.createElement('tr');
+
+    row.innerHTML = \`
+      <td class="remove-row-button" style="width: 5%; text-align: left; border: 1px solid black; padding: 5px;">
+        <button style="position: relative; left: -100px;" contentEditable="false">Remove</button>
+      </td>
+      <td style="width: 50%; text-align: left; border: 1px solid black; padding: 5px;">
+        <input type="text" class="product-name" style="width: 100% !important;" />
+      </td>
+      <td style="width: 10%; text-align: center; border: 1px solid black; padding: 5px;">
+        <span class="product-hsn">&nbsp;</span>
+      </td>
+      <td style="width: 5%; text-align: center; border: 1px solid black; padding: 5px;">
+        <span class="product-quantity">&nbsp;</span>
+      </td>
+      <td style="width: 15%; text-align: center; border: 1px solid black; padding: 5px;">
+        <span class="product-rate">&nbsp;</span>
+      </td>
+      <td style="width: 15%; text-align: right; border: 1px solid black; padding: 5px;">
+        $<span class="product-amount">0.00</span>
+      </td>
+    \`;
+
+    tbody.appendChild(row);
+
+    // Attach event listeners to the new row inputs
+    row.querySelector('.product-quantity').addEventListener('input', calculateTotalAmount);
+    row.querySelector('.product-rate').addEventListener('input', calculateTotalAmount);
+    row.querySelector('button').addEventListener('click', () => {
+      row.remove();
+      calculateTotalAmount();
+    });
+
+    calculateTotalAmount(); // Recalculate total amount after adding a new row
+  }
+
+  // Function to calculate the total amount
+  function calculateTotalAmount() {
+    let totalAmount = 0;
+
+    // Select all table rows in the tbody
+    const rows = document.querySelectorAll('.invoice-items-table tbody tr');
+
+    // Iterate through each row
+    rows.forEach(row => {
+      // Get quantity and rate inputs
+      const quantityInput = row.querySelector('.product-quantity');
+      const rateInput = row.querySelector('.product-rate');
+
+      // Check if both inputs exist
+      if (quantityInput && rateInput) {
+        const quantity = parseFloat(quantityInput.value) || 0;
+        const rate = parseFloat(rateInput.value) || 0;
+
+        // Calculate amount for the row
+        const amount = quantity * rate;
+
+        // Update the amount cell
+        row.querySelector('.product-amount').textContent = amount.toFixed(2);
+
+        // Add to the total amount
+        totalAmount += amount;
+      }
+    });
+
+    // Update the total amount in the designated element
+  }
+
+  // Event listener for the Add Product button
+  document.getElementById('addRowButton').addEventListener('click', addRow);
+
+  // Initial call to calculate the total amount on page load
+  window.onload = function() {
+    calculateTotalAmount();
+  };
+
+        </script>       
       </body>
       </html>`;
 
