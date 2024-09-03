@@ -63,8 +63,7 @@ async function createShipment(order, lineItemsForAWB, packages) {
         // Extract shipping information from the Shopify order
         const shippingAddress = order.shipping_address || order.billing_address;
         // Conditionally include stateOrProvinceCode based on the country
-        let stateOrProvinceCode = shippingAddress.province || '';
-        
+        let stateOrProvinceCode = shippingAddress.province_code || '';
 
         console.log("state code is ", stateOrProvinceCode);
         // Construct the payload for the shipping carrier API (FedEx/Aramex, etc.)
