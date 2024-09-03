@@ -41,7 +41,7 @@ router.get('/:orderId', async (req, res) => {
               .invoice-title { text-align: center; font-size: 20px; font-weight: bold; padding: 10px 0; }
               input[type="text"], input[type="number"] {border: 0 !important; }
               .actions-div { text-align: center; border-bottom: 1px solid #000; padding-bottom: 20px; }
-              @media print { .actions-div { display:none; } }
+              @media print { .hide-in-print{ display:none; } }
               #loader {
                 position: fixed;
                 top: 10px;  /* Adjust as needed */
@@ -191,7 +191,7 @@ router.get('/:orderId', async (req, res) => {
                                 <input type="number" class="package-width" min="0" style="width: 60px;" required />
                                 <label>Height (cm):</label>
                                 <input type="number" class="package-height" min="0" style="width: 60px;" required />
-                                <button type="button" class="remove-package-button">Remove</button>
+                                <button type="button" class="remove-package-button hide-in-print">Remove</button>
                             </span>
                         </div>
                     \`;
@@ -427,7 +427,7 @@ router.get('/:orderId', async (req, res) => {
 
       </head>
       <body>
-          <div class="actions-div">
+          <div class="actions-div hide-in-print">
             <button id="createAWBButton">Create Fedex AWB</button>
             <button onClick="validateAndPrint()">Print Invoice</button>
             <button id="generatePdfButton">Download PDF</button>
@@ -592,7 +592,7 @@ router.get('/:orderId', async (req, res) => {
               </div>
           </div>
           <div style="position:fixed; bottom: 10px; right: 10px;">
-              <button id="addRowButton">Add Line Item</button>
+              <button id="addRowButton" class="hide-in-print">Add Line Item</button>
           </div>
       <div id="loader" style="display: none;">
         <div class="spinner"></div>
