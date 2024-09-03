@@ -43,8 +43,11 @@ router.post('/', async (req, res) => {
         
         // Create shipment using line items for AWB and package details
         const shipmentResponse = await createShipment(order, lineItemsForAWB, packages); // Pass packages to the createShipment function
-        console.log("***************shipmentResponse****************");
-        res.json({ message: 'AWB created successfully!', shipmentDetails: shipmentResponse });
+        res.json({ 
+            message: 'AWB created successfully!', 
+            shipmentDetails: shipmentResponse, 
+            base64Label: shipmentResponse.encodedLabel 
+        });
     } catch (error) {
         console.error("Error creating shipment ! :", error.message);
         res.status(500).json({ error: error.message });
@@ -71,7 +74,7 @@ async function createShipment(order, lineItemsForAWB, packages) {
             "accountNumber": {
                 "value": "740561073"
             },
-            "labelResponseOptions": "URL_ONLY",
+            "labelResponseOptions": "LABEL",
             "requestedShipment": {
                 "pickupType": "USE_SCHEDULED_PICKUP", 
                 "shipper": {
@@ -161,9 +164,9 @@ async function createShipment(order, lineItemsForAWB, packages) {
                 })),
                 "serviceType": "INTERNATIONAL_PRIORITY",
                 "packagingType": "YOUR_PACKAGING",
-                "processingOptions": {
-                    "processingType": "DRAFT"
-                  }
+                // "processingOptions": {
+                //     "processingType": "DRAFT"
+                //   }
                 // TODO: add shipment reference number (order number), PO No (order number), Invoice number is BEX/24-25/0005 BEX/Year/Incremental invoice number , Department No is CS5/G/CIF/U/-/-/0/310824 last six digits are ddmmyy of the date invoice was generated/finalized.
                 // TODO: Check if invoice can be attached 
                 // TODO: Give download facility for customs invoice - naming convention - CustomerName-OrderNo-InvoiceNoSuffix
@@ -177,9 +180,8 @@ async function createShipment(order, lineItemsForAWB, packages) {
                 'Authorization': `Bearer ${accessToken}`
             }
         });
-        console.log(response);
-        const labelUrl = response.data.output.transactionShipments[0].pieceResponses[0].packageDocuments[0].url;
-        return { ...response.data, labelUrl };
+        const encodedLabel = response.data.output.transactionShipments[0].pieceResponses[0].packageDocuments[0].encodedLabel;
+        return { ...response.data, encodedLabel };
     } catch (error) {
         console.error("Error creating shipment:", JSON.stringify(error.response.data, null, 2));
         throw error;

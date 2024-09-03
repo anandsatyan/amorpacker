@@ -121,48 +121,51 @@ router.get('/:orderId', async (req, res) => {
                   }
 
                   try {
-                    // Fetch request to create a shipment
-                    const response = await fetch('/create-shipment', {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json'
-                      },
-                      body: JSON.stringify({ orderId, packages })
-                    });
+                      // Fetch request to create a shipment
+                      const response = await fetch('/create-shipment', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ orderId, packages })
+                      });
 
-                    // Parse the response as JSON
-                    const result = await response.json();
-                    console.log("AWB response received:", result);
+                      // Parse the response as JSON
+                      const result = await response.json();
+                      console.log("AWB response received:", result);
 
-                    if (response.ok && result.shipmentDetails && result.shipmentDetails.output) {
-                      const transactionShipments = result.shipmentDetails.output.transactionShipments;
+                      if (response.ok && result.shipmentDetails && result.shipmentDetails.output) {
+                        const transactionShipments = result.shipmentDetails.output.transactionShipments;
 
-                      if (transactionShipments && transactionShipments.length > 0) {
-                        // Extract the master tracking number (AWB number) from the first transaction shipment
-                        const awbNumber = transactionShipments[0].masterTrackingNumber;
-                        const labelUrl = result.shipmentDetails.labelUrl;
-
-                        if (awbNumber && labelUrl) {
+                        if (transactionShipments && transactionShipments.length > 0) {
+                          // Extract the master tracking number (AWB number) from the first transaction shipment
+                          const awbNumber = transactionShipments[0].masterTrackingNumber;
+                          // Alert or display AWB number
                           alert('AWB created successfully! AWB Number: ' + awbNumber);
-                          downloadLabelAsFile(labelUrl);
+
+                          // Check and download the label
+                          if (result.base64Label) {  // Use 'result' instead of 'data'
+                            downloadLabel(result.base64Label, 'FedExLabel.pdf');  // Ensure correct usage of 'result.base64Label'
+                          } else {
+                            console.error('Label data not found in response.');
+                            alert('Label data not found in response.');
+                          }
                         } else {
-                          alert('Error: AWB number not found in the response.');
+                          alert('Error: Transaction shipments not found in the response.');
                         }
                       } else {
-                        alert('Error: Transaction shipments not found in the response.');
+                        // If the response is not OK, display the error
+                        alert('Error creating AWB: ' + (result.error || 'Unknown error'));
                       }
-                    } else {
-                      // If the response is not OK, display the error
-                      alert('Error creating AWB: ' + (result.error || 'Unknown error'));
+                    } catch (error) {
+                      // Catch any errors during the fetch or JSON parsing
+                      console.error('Error creating AWB:', error.message);
+                      alert('Error creating AWB: ' + error.message);
+                    } finally {
+                      // Hide the loader regardless of success or error
+                      document.getElementById('loader').style.display = 'none';
                     }
-                  } catch (error) {
-                    // Catch any errors during the fetch or JSON parsing
-                    console.error('Error creating AWB:', error.message);
-                    alert('Error creating AWB: ' + error.message);
-                  } finally {
-                    // Hide the loader regardless of success or error
-                    document.getElementById('loader').style.display = 'none';
-                  }
+
                 });
               } else {
                 console.error("Create AWB button not found.");
@@ -394,49 +397,32 @@ router.get('/:orderId', async (req, res) => {
               attachRemoveListeners();
               calculateTotalAmount();
             };
-            async function downloadLabelAsFile(labelUrl) {
-              console.log('Attempting to download label from:', labelUrl); // Debug log for URL
-              
-              try {
-                  const response = await fetch(labelUrl, {
-                      method: 'GET',
-                      headers: {
-                          'Authorization': 'Bearer ${ACCESS_TOKEN}',  // Ensure this is correct and valid
-                          // Add more headers if required
-                      },
-                  });
+            
+          function downloadLabel(base64Label, filename) {
+              // Decode the base64 string to binary
+              const binaryString = window.atob(base64Label);
+              const len = binaryString.length;
+              const bytes = new Uint8Array(len);
 
-                  if (response.ok) {
-                      const contentType = response.headers.get('Content-Type'); // Get content type of response
-
-                      // Log content type for debugging
-                      console.log('Content-Type of response:', contentType);
-
-                      if (contentType && contentType.includes('pdf')) {
-                          const blob = await response.blob();
-                          const url = window.URL.createObjectURL(blob);
-                          const a = document.createElement('a');
-                          a.href = url;
-                          a.download = 'FedExLabel.pdf'; // Customize the file name if necessary
-                          document.body.appendChild(a);
-                          a.click();
-                          a.remove();
-                          window.URL.revokeObjectURL(url);
-                          console.log('Label downloaded successfully.');
-                      } else {
-                          console.error('Unexpected content type:', contentType);
-                          alert('Failed to download label. The response was not a PDF.');
-                      }
-                  } else {
-                      console.error('Failed to download label:', response.statusText);
-                      alert('Failed to download label: ' + response.statusText);
-                  }
-              } catch (error) {
-                  console.error('Error downloading label:', error.message);
-                  alert('Error downloading label: ' + error.message);
+              for (let i = 0; i < len; i++) {
+                  bytes[i] = binaryString.charCodeAt(i);
               }
-          }
 
+              // Create a Blob with the PDF data
+              const blob = new Blob([bytes], { type: 'application/pdf' });
+              const url = window.URL.createObjectURL(blob);
+
+              // Create a link element, set its download attribute and click it to download the file
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = filename;
+              document.body.appendChild(link);
+              link.click();
+
+              // Clean up and remove the link
+              link.parentNode.removeChild(link);
+              window.URL.revokeObjectURL(url);
+          }
           </script>
 
       </head>
@@ -582,6 +568,15 @@ router.get('/:orderId', async (req, res) => {
                       </tr>
                       <tr>
                         <td colspan="6" style="text-transform: uppercase"><strong>AMOUNT IN WORDS: ${numberToWords(grandTotal.toFixed(2))}</strong></td>
+                      </tr>
+                      <tr>
+                          <td colspan="6" style="text-transform: uppercase">
+                            <strong>Bank Details:</strong> <br />
+                            ACCOUNT NAME: BRANDSAMOR COMMERCE LLP<br />
+                            Account NO: 35060200000552<br />
+                            IFSC CODE: BARB0RAJAKI<br />
+                            SWIFT CODE : BARBINBBTAM<br />
+                          </td>
                       </tr>
                       <tr>
                         <td colspan="6"><center><strong>Declaration : This invoice is for customs purpose only. We declare that invoice shows the actual price of goods described and that all particulars are true & correct.</strong></center></td>
