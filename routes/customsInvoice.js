@@ -144,7 +144,7 @@ router.get('/:orderId', async (req, res) => {
 
                         if (awbNumber && labelUrl) {
                           alert('AWB created successfully! AWB Number: ' + awbNumber);
-                          window.open(labelUrl, '_blank');
+                          downloadLabelAsFile(labelUrl);
                         } else {
                           alert('Error: AWB number not found in the response.');
                         }
@@ -335,8 +335,16 @@ router.get('/:orderId', async (req, res) => {
                 });
 
                 // Attach event listeners to update the total when quantity or rate is edited
-                row.querySelector('.product-quantity').addEventListener('input', calculateTotalAmount);
-                row.querySelector('.product-rate').addEventListener('input', calculateTotalAmount);
+                const quantitySpan = row.querySelector('.product-quantity');
+                const rateSpan = row.querySelector('.product-rate');
+
+                quantitySpan.addEventListener('input', calculateTotalAmount);
+                rateSpan.addEventListener('input', calculateTotalAmount);
+
+                // Additionally listen for 'blur' event to ensure changes are caught when focus is lost
+                quantitySpan.addEventListener('blur', calculateTotalAmount);
+                rateSpan.addEventListener('blur', calculateTotalAmount);
+
 
                 calculateTotalAmount(); // Recalculate the total amount after adding a new row
               }
@@ -351,7 +359,7 @@ router.get('/:orderId', async (req, res) => {
               // Function to calculate the total amount
               function calculateTotalAmount() {
                 let totalAmount = 0;
-
+                console.log("HIT CALCULATETOTALAMOUNT");
                 // Select all table rows in the tbody
                 const rows = document.querySelectorAll('.invoice-items-table tbody tr');
 
@@ -363,8 +371,8 @@ router.get('/:orderId', async (req, res) => {
 
                   // Check if both inputs exist
                   if (quantityInput && rateInput) {
-                    const quantity = parseFloat(quantityInput.textContent) || 0;
-                    const rate = parseFloat(rateInput.textContent) || 0;
+                    const quantity = parseFloat(quantityInput.textContent.trim()) || 0;
+                    const rate = parseFloat(rateInput.textContent.trim()) || 0;
 
                     // Calculate amount for the row
                     const amount = quantity * rate;
@@ -378,15 +386,57 @@ router.get('/:orderId', async (req, res) => {
                 });
 
                 // Optionally update the total amount display in the invoice
-                // document.getElementById('totalAmount').textContent = totalAmount.toFixed(2);
+                 document.getElementById('totalAmount').textContent = totalAmount.toFixed(2);
               }
 
               // Event listener for the Add Line Item button
               document.getElementById('addRowButton').addEventListener('click', addLineItem);
               attachRemoveListeners();
-              // Initial call to calculate the total amount on page load
               calculateTotalAmount();
             };
+            async function downloadLabelAsFile(labelUrl) {
+              console.log('Attempting to download label from:', labelUrl); // Debug log for URL
+              
+              try {
+                  const response = await fetch(labelUrl, {
+                      method: 'GET',
+                      headers: {
+                          'Authorization': 'Bearer ${ACCESS_TOKEN}',  // Ensure this is correct and valid
+                          // Add more headers if required
+                      },
+                  });
+
+                  if (response.ok) {
+                      const contentType = response.headers.get('Content-Type'); // Get content type of response
+
+                      // Log content type for debugging
+                      console.log('Content-Type of response:', contentType);
+
+                      if (contentType && contentType.includes('pdf')) {
+                          const blob = await response.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = 'FedExLabel.pdf'; // Customize the file name if necessary
+                          document.body.appendChild(a);
+                          a.click();
+                          a.remove();
+                          window.URL.revokeObjectURL(url);
+                          console.log('Label downloaded successfully.');
+                      } else {
+                          console.error('Unexpected content type:', contentType);
+                          alert('Failed to download label. The response was not a PDF.');
+                      }
+                  } else {
+                      console.error('Failed to download label:', response.statusText);
+                      alert('Failed to download label: ' + response.statusText);
+                  }
+              } catch (error) {
+                  console.error('Error downloading label:', error.message);
+                  alert('Error downloading label: ' + error.message);
+              }
+          }
+
           </script>
 
       </head>
