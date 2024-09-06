@@ -95,15 +95,21 @@ async function generateLineItemHtml(item) {
         let hsCode = 'N/A'; // Default value for HS code
         let additionalInfo = '';
 
+        // Initialize itemHtml here
+        let itemHtml = `
+          <div class="flex-line-item">
+            <div class="flex-line-item-description">
+              <p class="line-item-title"><input type="checkbox" />&nbsp;<strong>${packingListName}</strong></p>
+              ${hsCode !== 'N/A' ? `<p>HS Code: ${hsCode}</p>` : ''}
+        `;
+
         // Check if the item is from a draft order (i.e., custom item without product ID or SKU)
         if (!item.product_id && !item.sku) {
-            // Extract HS code from the item title if it contains it in brackets
             const hsCodeMatch = item.title.match(/\((HS\d+)\)/);
             if (hsCodeMatch) {
                 hsCode = hsCodeMatch[1];
             }
         } else {
-            // Regular orders with product IDs
             const productMetafields = await fetchProductMetafields(item.product_id);
             packingListName = productMetafields.find(
                 (mf) => mf.namespace === 'custom' && mf.key === 'packing_list_name'
@@ -113,7 +119,6 @@ async function generateLineItemHtml(item) {
                 additionalInfo = item.properties.map((prop) => `${prop.value}`).join(', ');
             }
 
-            // Use the component metafield logic if the item is a regular product
             const componentsMetafield = productMetafields.find(
                 (mf) => mf.namespace === 'custom' && mf.key === 'components'
             );
@@ -121,7 +126,6 @@ async function generateLineItemHtml(item) {
             if (componentsMetafield && componentsMetafield.value) {
                 const components = JSON.parse(componentsMetafield.value);
                 if (Array.isArray(components) && components.length > 0) {
-                    // Fetch component details in parallel
                     const componentHtmlArray = await Promise.all(
                         components.map(async (componentGid) => {
                             const componentId = componentGid.split('/').pop();
@@ -144,18 +148,11 @@ async function generateLineItemHtml(item) {
                         })
                     );
 
+                    // Add component HTML to itemHtml
                     itemHtml += componentHtmlArray.join('');
                 }
             }
         }
-
-        // Prepare item HTML
-        let itemHtml = `
-          <div class="flex-line-item">
-            <div class="flex-line-item-description">
-              <p class="line-item-title"><input type="checkbox" />&nbsp;<strong>${packingListName}</strong></p>
-              ${hsCode !== 'N/A' ? `<p>HS Code: ${hsCode}</p>` : ''}
-        `;
 
         if (item.sku) {
             itemHtml += `<p class="line-item-sku">SKU: ${item.sku}</p>`;
