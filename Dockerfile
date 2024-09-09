@@ -1,4 +1,4 @@
-# Use the official Node.js base image (you can specify the version)
+# Use the official Node.js base image
 FROM node:14
 
 # Install system dependencies, including ImageMagick and GraphicsMagick
