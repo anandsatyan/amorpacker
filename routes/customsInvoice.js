@@ -650,7 +650,7 @@ router.get('/:orderId', async (req, res) => {
                   </tfoot>
               </table>
              <!-- Image at the Bottom -->
-              <div style="text-align: right; margin-top: -130px;">
+              <div style="text-align: right; margin-top: -115px;">
                   <img id="brandImage" src="https://cdn.shopify.com/s/files/1/0857/0984/8873/files/BRANDSAMOR_COMMERCE_L.L.P..png?v=1722773361" width="150px" />
               </div>
           </div>

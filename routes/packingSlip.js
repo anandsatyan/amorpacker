@@ -2,8 +2,38 @@
 const express = require('express');
 const axios = require('axios');
 const router = express.Router();
+const { fromPath } = require('pdf2pic');
+const { PDFDocument } = require('pdf-lib');
+
 const { fetchProductMetafields, generateLineItemHtml } = require('../utils/helpers');
 const { SHOPIFY_API_URL, ACCESS_TOKEN } = require('../shopifyConfig');
+const fs = require('fs');
+
+// Check if the uploads directory exists, if not, create it
+if (!fs.existsSync('uploads')) {
+  fs.mkdirSync('uploads');
+}
+
+const multer = require('multer');
+const path = require('path');
+
+const imageDir = path.join(__dirname, '../uploads/images');
+if (!fs.existsSync(imageDir)) {
+  fs.mkdirSync(imageDir, { recursive: true });
+}
+
+// Set up multer for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');  // save files in 'uploads' directory
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${req.params.orderId}${path.extname(file.originalname)}`);
+  }
+});
+
+const upload = multer({ storage: storage });
+
 
 // Route to generate packing slip
 router.get('/:orderId', async (req, res) => {
@@ -92,19 +122,88 @@ router.get('/:orderId', async (req, res) => {
     packingSlipHtml += lineItemHtmlArray.join('');
 
     packingSlipHtml += `
-          </div><br />
-          <hr><br />
-          <div style="text-align: end;"><input type="checkbox" />&nbsp;Samples&nbsp; <input type="checkbox" />&nbsp;Stickers&nbsp;<input type="checkbox" />&nbsp;Tester+Holder&nbsp;<input type="checkbox" />&nbsp;Sample Box&nbsp;<input type="checkbox" />&nbsp;QC Complete</div>
-        </div>
-      </body>
-      </html>`;
+          <hr>
+          <div style="text-align: end;">
+            <input type="checkbox" />&nbsp;Samples&nbsp; 
+            <input type="checkbox" />&nbsp;Stickers&nbsp;
+            <input type="checkbox" />&nbsp;Tester+Holder&nbsp;
+            <input type="checkbox" />&nbsp;Sample Box&nbsp;
+            <input type="checkbox" />&nbsp;QC Complete
+          </div>`;
 
-    res.send(packingSlipHtml);
+         // Path to the uploaded PDF file
+          const pdfFilePath = path.join(__dirname, '../uploads', `${orderId}.pdf`);
+
+          // Check if the PDF file exists
+          if (fs.existsSync(pdfFilePath)) {
+            // Load the PDF using pdf-lib to get the total number of pages
+            const pdfBuffer = fs.readFileSync(pdfFilePath);
+            const pdfDoc = await PDFDocument.load(pdfBuffer);
+            const totalPages = pdfDoc.getPageCount(); // Get total page count
+
+            // Set up pdf2pic conversion options
+            const options = {
+              density: 100, // DPI of the images
+              saveFilename: `${orderId}_page`,
+              savePath: path.join(__dirname, '../uploads/images'),
+              format: 'png',
+              width: 150, // Width of the image
+              height: 150, // Height of the image
+            };
+
+            const storeAsImage = fromPath(pdfFilePath, options);
+            packingSlipHtml += `Label Preview <br /><hr/><br />`;
+            // Loop through all pages and convert each page to an image
+            for (let i = 1; i <= totalPages; i++) {
+              await storeAsImage(i); // Convert each page to an image
+
+              // Add the generated image as a preview to the HTML
+              packingSlipHtml += `
+                <span class="pdf-preview">
+                  <img src="/uploads/images/${orderId}_page.${i}.png" alt="PDF Preview - Page ${i}" style="width: 150px; height: auto;" />
+                </span>`;
+            }
+          } else {
+            packingSlipHtml += `
+              <hr>
+              <div>
+                <p>...</p>
+              </div>`;
+          }
+
+          packingSlipHtml += `</body></html>`;
+
+          res.send(packingSlipHtml);
+
 
   } catch (error) {
     console.error("Error generating packing slip:", error.response ? error.response.data : error.message);
     res.status(500).send('Error generating packing slip. Check if there are samples in this order or if this is a custom draft order.');
   }
+});
+
+router.post('/:orderId/upload', upload.single('pdfFile'), (req, res) => {
+  const orderId = req.params.orderId;
+
+  if (req.file) {
+    // Redirect to the GET route that shows the packing slip
+    return res.redirect(`/generate-packing-slip/${orderId}?success=true`);
+  }
+
+  // If no file is uploaded, return an error message
+  res.status(400).send('No file uploaded. Please upload a PDF.');
+});
+
+
+router.get('/:orderId/upload-pdf', (req, res) => {
+  const orderId = req.params.orderId;
+  res.send(`
+    <form action="/generate-packing-slip/${orderId}/upload" method="post" enctype="multipart/form-data">
+      <h3>Upload PDF Design:</h3>
+      <input type="file" name="pdfFile" accept="application/pdf" required />
+      <button type="submit">Upload PDF</button>
+    </form>
+  `);
 });
 
 module.exports = router;

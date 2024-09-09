@@ -47,7 +47,7 @@ router.get('/', async (req, res) => {
           <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Destination</th>
           <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Total Price</th>
           <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Actions</th>
-          <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Export Invoice</th>
+          <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Invoice</th>
         </tr>
       </thead>
       <tbody>
@@ -63,20 +63,20 @@ router.get('/', async (req, res) => {
 
             const tags = order.tags ? order.tags.split(',').map(tag => tag.trim()).join(', ') : 'No tags';
             const customerName = order.customer ? `${order.customer.first_name} ${order.customer.last_name}` : 'Guest';
-            const destination = order.shipping_address ? `${order.shipping_address.city}, ${order.shipping_address.country}` : 'No destination';
+            const destination = order.shipping_address ? `${order.shipping_address.country}` : 'No destination';
 
             const rowBgColor = index % 2 === 0 ? '#fdfdfd' : '#ffffff';
 
             orderHtml += `
-              <tr style="background-color: ${rowBgColor}; font-size: 9pt !important;">
+              <tr style="background-color: ${rowBgColor}; font-size: 8pt !important;">
                 <td style="padding: 8px; border-bottom: 1px solid #ddd;">${order.name}</td>
                 <td style="padding: 8px; border-bottom: 1px solid #ddd;">${formattedDate}</td>
                 <td style="padding: 8px; border-bottom: 1px solid #ddd;">${customerName}</td>
                 <td style="padding: 8px; border-bottom: 1px solid #ddd;">${tags}</td>
                 <td style="padding: 8px; border-bottom: 1px solid #ddd;">${destination}</td>
                 <td style="padding: 8px; border-bottom: 1px solid #ddd;">$${order.total_price}</td>
-                <td style="padding: 8px; border-bottom: 1px solid #ddd;"><a href="/generate-packing-slip/${order.id}">Packing Slip</a></td>
-                <td style="padding: 8px; border-bottom: 1px solid #ddd;"><a href="/generate-customs-invoice/${order.id}" target="_blank">Export Invoice</a></td>
+                <td style="padding: 8px; border-bottom: 1px solid #ddd;"><a href="/generate-packing-slip/${order.id}">Pack</a></td>
+                <td style="padding: 8px; border-bottom: 1px solid #ddd;"><a href="/generate-customs-invoice/${order.id}" target="_blank">Invoice</a></td>
               </tr>
             `;
         });
@@ -187,7 +187,7 @@ router.get('/all', async (req, res) => {
                     <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Destination</th>
                     <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Total Price</th>
                     <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Actions</th>
-                    <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Export Invoice</th>
+                    <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Invoice</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -214,8 +214,8 @@ router.get('/all', async (req, res) => {
                   <td style="padding: 8px; border-bottom: 1px solid #ddd;">${tags}</td>
                   <td style="padding: 8px; border-bottom: 1px solid #ddd;">${destination}</td>
                   <td style="padding: 8px; border-bottom: 1px solid #ddd;">$${order.total_price}</td>
-                  <td style="padding: 8px; border-bottom: 1px solid #ddd;"><a href="/generate-packing-slip/${order.id}">Packing Slip</a></td>
-                  <td style="padding: 8px; border-bottom: 1px solid #ddd;"><a href="/generate-customs-invoice/${order.id}" target="_blank">Export Invoice</a></td>
+                  <td style="padding: 8px; border-bottom: 1px solid #ddd;"><a href="/generate-packing-slip/${order.id}">Slip</a></td>
+                  <td style="padding: 8px; border-bottom: 1px solid #ddd;"><a href="/generate-customs-invoice/${order.id}" target="_blank">Invoice</a></td>
                 </tr>
               `;
           });

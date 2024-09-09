@@ -22,6 +22,9 @@ app.use(basicAuthMiddleware);
 // Home route
 app.use('/', homeRoute);
 
+// File Upload route
+app.use('/uploads', express.static('uploads'));
+
 // Orders route
 app.use('/orders', ordersRoute);
 
