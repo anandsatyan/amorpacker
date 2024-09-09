@@ -39,7 +39,7 @@ router.get('/:orderId', async (req, res) => {
                   background-color: #ffffff; font-weight: bold;
               }
               .invoice-title { text-align: center; font-size: 20px; font-weight: bold; padding: 10px 0; }
-              input[type="text"], input[type="number"] {border: 0 !important; }
+              input[type="text"], input[type="number"] {border: 0 !important; , text-align: center}
               .actions-div { text-align: center; border-bottom: 1px solid #000; padding-bottom: 20px; }
               @media print { .hide-in-print{ display:none; } }
               #loader {
@@ -318,15 +318,16 @@ router.get('/:orderId', async (req, res) => {
                     <span class="product-hsn" contentEditable="true">&nbsp;</span>
                   </td>
                   <td style="width: 5%; text-align: center; border: 1px solid black; padding: 5px;">
-                    <span class="product-quantity" contentEditable="true">&nbsp;</span>
+                    <input type="number" class="product-quantity" value="0" style="width: 100% !important; text-align:center;" />
                   </td>
                   <td style="width: 15%; text-align: center; border: 1px solid black; padding: 5px;">
-                    <span class="product-rate" contentEditable="true">&nbsp;</span>
+                    <input type="number" class="product-rate" value="0" style="width: 100% !important; text-align:center;" />
                   </td>
                   <td style="width: 15%; text-align: right; border: 1px solid black; padding: 5px;">
                     $<span class="product-amount">0.00</span>
                   </td>
                 \`;
+
 
                 // Add the new row to the table body
                 tbody.appendChild(row);
@@ -361,39 +362,81 @@ router.get('/:orderId', async (req, res) => {
               }
               // Function to calculate the total amount
               function calculateTotalAmount() {
-                let totalAmount = 0;
-                console.log("HIT CALCULATETOTALAMOUNT");
-                // Select all table rows in the tbody
-                const rows = document.querySelectorAll('.invoice-items-table tbody tr');
+                  let totalAmount = 0;  // Initialize totalAmount to 0
+                  console.log("HIT CALCULATETOTALAMOUNT");
 
-                // Iterate through each row
-                rows.forEach(row => {
-                  // Get quantity and rate inputs
-                  const quantityInput = row.querySelector('.product-quantity');
-                  const rateInput = row.querySelector('.product-rate');
+                  const rows = document.querySelectorAll('.invoice-items-table tbody tr');
+                  rows.forEach(row => {
+                      // Get quantity and rate inputs
+                      const quantityInput = row.querySelector('.product-quantity');
+                      const rateInput = row.querySelector('.product-rate');
+                      const amountCell = row.querySelector('.product-amount');
+                      
+                      // Check if both inputs exist
+                      if (quantityInput && rateInput) {
+                          const quantity = parseFloat(quantityInput.value) || 0;  // Use value for input elements
+                          const rate = parseFloat(rateInput.value) || 0;  // Use value for input elements
 
-                  // Check if both inputs exist
-                  if (quantityInput && rateInput) {
-                    const quantity = parseFloat(quantityInput.textContent.trim()) || 0;
-                    const rate = parseFloat(rateInput.textContent.trim()) || 0;
+                          // Calculate amount for the row
+                          const amount = quantity * rate;
 
-                    // Calculate amount for the row
-                    const amount = quantity * rate;
+                          // Update the amount cell
+                          amountCell.textContent = amount.toFixed(2);  // Update the amount in the row
 
-                    // Update the amount cell
-                    row.querySelector('.product-amount').textContent = amount.toFixed(2);
+                          // Add to the total amount
+                          totalAmount += amount;
+                      }
+                  });
 
-                    // Add to the total amount
-                    totalAmount += amount;
-                  }
-                });
-
-                // Optionally update the total amount display in the invoice
-                 document.getElementById('totalAmount').textContent = totalAmount.toFixed(2);
+                  // Optionally update the total amount display in the invoice
+                  document.getElementById('totalAmount').textContent = totalAmount.toFixed(2);
+                   let numInWords = numberToWords(totalAmount);
+                  document.getElementById('spanAmtInWords').textContent =numInWords;
+                  
               }
+
+              function recalculateTotalAmount() {
+                  let totalAmount = 0;  // Initialize totalAmount to 0
+                  console.log("HIT RECALCULATETOTALAMOUNT");
+
+                  const rows = document.querySelectorAll('.invoice-items-table tbody tr');
+                  rows.forEach(row => {
+                      // Get quantity and rate inputs
+                      const quantityInput = row.querySelector('.product-quantity');
+                      const rateInput = row.querySelector('.product-rate');
+                      const amountCell = row.querySelector('.product-amount');
+                      
+                      console.log(quantityInput);
+                      console.log("CHECK CHECK");
+
+                      // Check if both inputs exist
+                      if (quantityInput && rateInput) {
+                          const quantity = parseFloat(quantityInput.value) || 0;  // Use value for input elements
+                          const rate = parseFloat(rateInput.value) || 0;  // Use value for input elements
+                          console.log(quantity);
+                          console.log(rate);
+
+                          // Calculate amount for the row
+                          const amount = quantity * rate;
+
+                          // Update the amount cell
+                          amountCell.textContent = amount.toFixed(2);  // Update the amount in the row
+
+                          // Add to the total amount
+                          totalAmount += amount;
+                      }
+                  });
+
+                  // Optionally update the total amount display in the invoice
+                  document.getElementById('totalAmount').textContent = totalAmount.toFixed(2);
+                 
+              }
+
 
               // Event listener for the Add Line Item button
               document.getElementById('addRowButton').addEventListener('click', addLineItem);
+              document.getElementById('recalculateButton').addEventListener('click', recalculateTotalAmount);
+
               attachRemoveListeners();
               calculateTotalAmount();
             };
@@ -423,6 +466,70 @@ router.get('/:orderId', async (req, res) => {
               link.parentNode.removeChild(link);
               window.URL.revokeObjectURL(url);
           }
+              function numberToWords(num) {
+                  if (num === 0) return 'zero';
+
+                  const belowTwenty = [
+                      'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
+                      'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen',
+                      'eighteen', 'nineteen'
+                  ];
+
+                  const tens = [
+                      '', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'
+                  ];
+
+                  const thousands = ['', 'thousand', 'million', 'billion'];
+
+                  function convertBelowThousand(num) {
+                      let result = '';
+
+                      if (num >= 100) {
+                          result += belowTwenty[Math.floor(num / 100)] + ' hundred ';
+                          num %= 100;
+                      }
+
+                      if (num >= 20) {
+                          result += tens[Math.floor(num / 10)] + ' ';
+                          num %= 10;
+                      }
+
+                      if (num > 0) {
+                          result += belowTwenty[num] + ' ';
+                      }
+
+                      return result.trim();
+                  }
+
+                  function convertToWords(num) {
+                      let result = '';
+                      let thousandIndex = 0;
+
+                      while (num > 0) {
+                          if (num % 1000 !== 0) {
+                              result = convertBelowThousand(num % 1000) + (thousandIndex > 0 ? ' ' + thousands[thousandIndex] + ' ' : '') + result;
+                          }
+
+                          num = Math.floor(num / 1000);
+                          thousandIndex++;
+                      }
+
+                      return result.trim();
+                  }
+
+                  // Split the number into whole and fractional parts
+                  const wholePart = Math.floor(num);
+                  const fractionalPart = Math.round((num - wholePart) * 100);
+
+                  let result = 'USD ' + convertToWords(wholePart);
+
+                  if (fractionalPart > 0) {
+                      result += ' and cents ' + convertToWords(fractionalPart);
+                  }
+
+                  return result;
+              }
+                
           </script>
 
       </head>
@@ -564,13 +671,14 @@ router.get('/:orderId', async (req, res) => {
                   <tfoot>
                       <tr>
                         <td colspan="5"><strong>AMOUNT (USD)</strong></td>
-                        <td style="text-align: right; font-weight: bold;">$${grandTotal.toFixed(2)}</td>
+                        <td id="totalAmount" style="text-align: right; font-weight: bold;">$${grandTotal.toFixed(2)}</td>
                       </tr>
                       <tr>
-                        <td colspan="6" style="text-transform: uppercase"><strong>AMOUNT IN WORDS: ${numberToWords(grandTotal.toFixed(2))}</strong></td>
+                        <td class="amount-in-words" colspan="6" style="text-transform: uppercase"><strong>AMOUNT IN WORDS: <span id="spanAmtInWords">${numberToWords(grandTotal.toFixed(2))}</span></strong></td>
                       </tr>
                       <tr>
                           <td colspan="6" style="text-transform: uppercase">
+                            <div style="text-align:right" contentEditable="false" class="hide-in-print"><button id="recalculateButton">Recalculate</button></div>
                             <strong>Bank Details:</strong> <br />
                             ACCOUNT NAME: BRANDSAMOR COMMERCE LLP<br />
                             Account NO: 35060200000552<br />

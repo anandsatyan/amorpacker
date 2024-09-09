@@ -458,26 +458,27 @@ async function generateCustomsInvoiceLineItemsHtml(order) {
         for (const key in aggregatedItems) {
             const item = aggregatedItems[key];
             itemsHtml += `
-                <tr>
-                    <td class="remove-row-button" style="width: 5%; text-align: left; border: 1px solid black; padding: 5px;">
-                        <button style="position: relative; left: -100px;" contentEditable="false">Remove</button>
-                    </td>
-                    <td style="width: 45%; text-align: left; border: 1px solid black; padding: 5px;">
-                        <strong>${item.name}</strong>
-                    </td>
-                    <td style="width: 10%; text-align: center; border: 1px solid black; padding: 5px;">
-                        ${item.hsCode}
-                    </td>
-                    <td style="width: 10%; text-align: center; border: 1px solid black; padding: 5px;">
-                        ${item.quantity}
-                    </td>
-                    <td style="width: 15%; text-align: center; border: 1px solid black; padding: 5px;">
-                        $${item.unitPrice.toFixed(2)}
-                    </td>
-                    <td style="width: 20%; text-align: right; border: 1px solid black; padding: 5px;">
-                        $${item.totalPrice.toFixed(2)}
-                    </td>
-                </tr>`;
+                    <tr>
+                        <td class="remove-row-button" style="width: 5%; text-align: left; border: 1px solid black; padding: 5px;">
+                            <button style="position: relative; left: -100px;" contentEditable="false">Remove</button>
+                        </td>
+                        <td style="width: 45%; text-align: left; border: 1px solid black; padding: 5px;">
+                            <strong>${item.name}</strong>
+                        </td>
+                        <td style="width: 10%; text-align: center; border: 1px solid black; padding: 5px;">
+                            ${item.hsCode}
+                        </td>
+                        <td contentEditable="false" style="width: 10%; text-align: center; border: 1px solid black; padding: 5px;">
+                            <center><input type="number" class="product-quantity" value="${item.quantity}" style="width: 100%; text-align:center;" /></center>
+                        </td>
+                        <td contentEditable="false" style="width: 15%; text-align: center; border: 1px solid black; padding: 5px;">
+                            <center><input type="number" class="product-rate" value="${item.unitPrice.toFixed(2)}" style="width: 100%; text-align:center;" /></center>
+                        </td>
+                        <td style="width: 20%; text-align: right; border: 1px solid black; padding: 5px;">
+                            $<span class="product-amount">${item.totalPrice.toFixed(2)}</span>
+                        </td>
+                    </tr>`;
+
             grandTotal += item.totalPrice;
         }
 
