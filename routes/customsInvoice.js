@@ -279,10 +279,10 @@ router.get('/:orderId', async (req, res) => {
                   packageWeights.forEach(input => {
                       totalWeight += parseFloat(input.value) || 0;
                   });
-                  document.getElementsByName("grossWeight")[0].value = totalWeight.toFixed(2);
+                  document.getElementsByName("netWeight")[0].value = totalWeight.toFixed(2);
                   const numberOfPackages = document.querySelectorAll('.package-item').length;
-                  const netWeight = totalWeight - (numberOfPackages * 0.25);
-                  document.getElementsByName("netWeight")[0].value = netWeight.toFixed(2);
+                  const grossWeight = totalWeight + (numberOfPackages * 0.25);
+                  document.getElementsByName("grossWeight")[0].value = grossWeight.toFixed(2);
               }
 
               // Initial call to set package count and weight on load
