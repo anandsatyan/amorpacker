@@ -33,7 +33,7 @@ router.get('/:orderId', async (req, res) => {
               .wrapper { width: 100%; max-width: 800px; margin: 0 auto; }
               .invoice-header-table, .invoice-items-table { width: 100%; border-collapse: collapse;}
               .invoice-header-table, .invoice-items-table th, .invoice-header-table td, .invoice-items-table td {
-                  border: 1px solid black; padding: 10px; text-align: left; vertical-align: top; font-size: 10pt;
+                  border: 1px solid black; padding: 4px; text-align: left; vertical-align: top; font-size: 10pt;
               }
               .invoice-header-table th, .invoice-items-table th {
                   background-color: #ffffff; font-weight: bold;
@@ -389,7 +389,7 @@ router.get('/:orderId', async (req, res) => {
                   });
 
                   // Optionally update the total amount display in the invoice
-                  document.getElementById('totalAmount').textContent = totalAmount.toFixed(2);
+                  document.getElementById('totalAmount').textContent = "$" + totalAmount.toFixed(2);
                    let numInWords = numberToWords(totalAmount);
                   document.getElementById('spanAmtInWords').textContent =numInWords;
                   
@@ -519,9 +519,9 @@ router.get('/:orderId', async (req, res) => {
           <div id="printableInvoiceArea" class="wrapper invoice-container" contentEditable="true">
               <!-- First Table (Header Information) -->
               <table class="invoice-header-table">
-                  <tr><td colspan="3" class="invoice-title"><center>INVOICE</center></td></tr>
+                  <tr><td colspan="3" class="invoice-title"><center style="font-size: 16pt;">INVOICE</center></td></tr>
                   <tr>
-                      <td rowspan="3" class="seller-info">
+                      <td class="seller-info">
                           <strong>Seller:</strong><br>
                           Brandsamor Commerce LLP<br>
                           50 Raghavendra Nagar Rajakilpakkam<br>
@@ -533,29 +533,21 @@ router.get('/:orderId', async (req, res) => {
                           <strong>Invoice No. & Dt</strong><br>
                           ${invoiceNumber}<br>
                           DT: ${invoiceDate}
-                      </td>
-                      <td>
-                          <strong>AD Code:</strong> 0202632<br>
-                          <strong>GSTIN:</strong> 33ABCFB8402A1Z8
-                      </td>
-                  </tr>
-                  <tr>
-                      <td>
+                          <br /><br />
                           <strong>Buyer's Order No. & Dt</strong><br>
                           Order ${order.name}<br>
                           DT: ${new Date(order.created_at).toLocaleDateString('en-GB', {
                             day: '2-digit',
                             month: 'short',
                             year: 'numeric'
-                          })}
+                          })}<br />
+                          
                       </td>
                       <td>
-                          <strong>IEC:</strong> ABCFB8402A<br>
-                          <strong>LUT:</strong> AD330524103870G
-                      </td>
-                  </tr>
-                  <tr>
-                      <td colspan="2">
+                          <strong>AD Code:</strong> 0202632<br />
+                          <strong>GSTIN:</strong> 33ABCFB8402A1Z8<br /><br />
+                           <strong>IEC:</strong> ABCFB8402A<br />
+                          <strong>LUT:</strong> AD330524103870G<br /><br />
                           <strong>Other reference(s):</strong> ${order.name}
                       </td>
                   </tr>
@@ -588,8 +580,7 @@ router.get('/:orderId', async (req, res) => {
                   <tr>
                       <td>
                           <strong>Person:</strong><br />
-                          ${shippingAddress.name}<br />
-                          Tel.:${shippingAddress.phone}
+                          ${shippingAddress.name} (${shippingAddress.phone})
                       </td>
                       <td>
                           <strong>Country of Origin of Goods:</strong><br />
@@ -601,12 +592,12 @@ router.get('/:orderId', async (req, res) => {
                       </td>
                   </tr>
                   <tr>
-                      <td>
+                      <td style="font-size: 8pt !important">
                           <strong>Pre-Carriage by</strong> ROAD<br>
                           <strong>Vessel / Flight No.</strong><br>
                           <strong>Port of Discharge</strong> Air
                       </td>
-                      <td>
+                      <td style="font-size: 8pt !important">
                           <strong>Place of Receipt by pre-carrier</strong><br>
                           <strong>Port of loading</strong> Chennai<br>
                           <strong>Final Destination</strong><br />
@@ -614,7 +605,7 @@ router.get('/:orderId', async (req, res) => {
                           ${shippingAddress.province ? `${shippingAddress.province}, ` : ''}
                           ${shippingAddress.country ? `${shippingAddress.country}` : ''}
                       </td>
-                      <td>
+                      <td style="font-size: 8pt !important">
                           <strong>Terms of Delivery & payment</strong><br>
                           CIF
                       </td>
@@ -642,27 +633,24 @@ router.get('/:orderId', async (req, res) => {
                         <td id="totalAmount" style="text-align: right; font-weight: bold;">$${grandTotal.toFixed(2)}</td>
                       </tr>
                       <tr>
-                        <td class="amount-in-words" colspan="6" style="text-transform: uppercase"><strong>AMOUNT IN WORDS: <span id="spanAmtInWords">${numberToWords(grandTotal.toFixed(2))}</span></strong></td>
+                        <td class="amount-in-words" colspan="6" style="text-transform: uppercase; font-size: 8pt;"><strong>AMOUNT IN WORDS: <span id="spanAmtInWords">${numberToWords(grandTotal.toFixed(2))}</span></strong></td>
                       </tr>
                       <tr>
-                          <td colspan="6" style="text-transform: uppercase">
+                          <td colspan="2" style="text-transform: uppercase">
+                            <small>
                             <strong>Bank Details:</strong> <br />
                             ACCOUNT NAME: BRANDSAMOR COMMERCE LLP<br />
                             Account NO: 35060200000552<br />
                             IFSC CODE: BARB0RAJAKI<br />
                             SWIFT CODE : BARBINBBTAM<br />
+                            </small>
                           </td>
-                      </tr>
-                      <tr>
-                        <td colspan="6"><center><strong>Declaration : This invoice is for customs purpose only. We declare that invoice shows the actual price of goods described and that all particulars are true & correct.</strong></center></td>
-                      </tr>
-                      <tr>
-                        <td colspan="6"><center>Note: Invoice is digitally signed and manual signature is not required</center></td>
+                        <td colspan="4"><strong><small>Declaration : This invoice is for customs purpose only. Invoice shows the actual price of goods described and that all particulars are true & correct. <br /><br />Note: Invoice is digitally signed and manual signature is not required</small></td>
                       </tr>
                   </tfoot>
               </table>
              <!-- Image at the Bottom -->
-              <div style="text-align: right; margin-top: -80px;">
+              <div style="text-align: right; margin-top: -130px;">
                   <img id="brandImage" src="https://cdn.shopify.com/s/files/1/0857/0984/8873/files/BRANDSAMOR_COMMERCE_L.L.P..png?v=1722773361" width="150px" />
               </div>
           </div>
