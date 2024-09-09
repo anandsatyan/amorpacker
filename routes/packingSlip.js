@@ -167,7 +167,7 @@ router.get('/:orderId', async (req, res) => {
             packingSlipHtml += `
               <hr>
               <div>
-                <p>..</p>
+                <p>...</p>
               </div>`;
           }
 
