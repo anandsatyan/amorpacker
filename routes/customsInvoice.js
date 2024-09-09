@@ -394,48 +394,16 @@ router.get('/:orderId', async (req, res) => {
                   document.getElementById('spanAmtInWords').textContent =numInWords;
                   
               }
+              document.querySelectorAll('.product-quantity').forEach(input => {
+                  input.addEventListener('input', calculateTotalAmount);
+              });
 
-              function recalculateTotalAmount() {
-                  let totalAmount = 0;  // Initialize totalAmount to 0
-                  console.log("HIT RECALCULATETOTALAMOUNT");
-
-                  const rows = document.querySelectorAll('.invoice-items-table tbody tr');
-                  rows.forEach(row => {
-                      // Get quantity and rate inputs
-                      const quantityInput = row.querySelector('.product-quantity');
-                      const rateInput = row.querySelector('.product-rate');
-                      const amountCell = row.querySelector('.product-amount');
-                      
-                      console.log(quantityInput);
-                      console.log("CHECK CHECK");
-
-                      // Check if both inputs exist
-                      if (quantityInput && rateInput) {
-                          const quantity = parseFloat(quantityInput.value) || 0;  // Use value for input elements
-                          const rate = parseFloat(rateInput.value) || 0;  // Use value for input elements
-                          console.log(quantity);
-                          console.log(rate);
-
-                          // Calculate amount for the row
-                          const amount = quantity * rate;
-
-                          // Update the amount cell
-                          amountCell.textContent = amount.toFixed(2);  // Update the amount in the row
-
-                          // Add to the total amount
-                          totalAmount += amount;
-                      }
-                  });
-
-                  // Optionally update the total amount display in the invoice
-                  document.getElementById('totalAmount').textContent = totalAmount.toFixed(2);
-                 
-              }
-
+              document.querySelectorAll('.product-rate').forEach(input => {
+                  input.addEventListener('input', calculateTotalAmount);
+              });
 
               // Event listener for the Add Line Item button
               document.getElementById('addRowButton').addEventListener('click', addLineItem);
-              document.getElementById('recalculateButton').addEventListener('click', recalculateTotalAmount);
 
               attachRemoveListeners();
               calculateTotalAmount();
@@ -678,7 +646,6 @@ router.get('/:orderId', async (req, res) => {
                       </tr>
                       <tr>
                           <td colspan="6" style="text-transform: uppercase">
-                            <div style="text-align:right" contentEditable="false" class="hide-in-print"><button id="recalculateButton">Recalculate</button></div>
                             <strong>Bank Details:</strong> <br />
                             ACCOUNT NAME: BRANDSAMOR COMMERCE LLP<br />
                             Account NO: 35060200000552<br />

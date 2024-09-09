@@ -474,7 +474,7 @@ async function generateCustomsInvoiceLineItemsHtml(order) {
                         <td contentEditable="false" style="width: 15%; text-align: center; border: 1px solid black; padding: 5px;">
                             <center><input type="number" class="product-rate" value="${item.unitPrice.toFixed(2)}" style="width: 100%; text-align:center;" /></center>
                         </td>
-                        <td style="width: 20%; text-align: right; border: 1px solid black; padding: 5px;">
+                        <td style="width: 20%; text-align: right; border: 1px solid black; padding: 5px;" contentEditable="false">
                             $<span class="product-amount">${item.totalPrice.toFixed(2)}</span>
                         </td>
                     </tr>`;
