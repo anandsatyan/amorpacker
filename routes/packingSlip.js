@@ -2,6 +2,7 @@
 const express = require('express');
 const axios = require('axios');
 const router = express.Router();
+const gm = require('gm').subClass({ imageMagick: true });
 const { fromPath } = require('pdf2pic');
 const { PDFDocument } = require('pdf-lib');
 
@@ -167,7 +168,7 @@ router.get('/:orderId', async (req, res) => {
             packingSlipHtml += `
               <hr>
               <div>
-                <p>...</p>
+                <p>....</p>
               </div>`;
           }
 
