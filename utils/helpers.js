@@ -251,13 +251,6 @@ async function addComponentsForSampleItem(item, additionalInfo) {
     }
 }
 
-// Function to generate the invoice number
-function generateInvoiceNumber(orderName) {
-    const orderNumber = parseInt(orderName.replace('#', ''));
-    const baseNumber = orderNumber - 1027; // Subtract 1027 from the order number
-    const invoiceNumber = `BRNSMR-FR-${String(baseNumber).padStart(6, '0')}`; // Format with leading zeros
-    return invoiceNumber;
-}
 
 async function generateCustomsInvoiceLineItemsHtml(order) {
     try {
@@ -556,6 +549,29 @@ function numberToWords(num) {
 
     return result;
 }
+
+const Counter = require('../models/counter');
+
+async function generateInvoiceNumber() {
+    const currentYear = new Date().getFullYear();
+    const nextYear = currentYear + 1;
+
+    const yearRange = `${currentYear.toString().slice(-2)}-${nextYear.toString().slice(-2)}`;
+
+    // Find the counter in the database and increment the sequence number
+    const counter = await Counter.findOneAndUpdate(
+        { name: 'invoiceNumber' }, 
+        { $inc: { seq: 1 } }, 
+        { new: true, upsert: true }  // Create the document if it doesn't exist
+    );
+
+    // Format the sequence number with leading zeros (e.g., 0023)
+    const paddedSeq = counter.seq.toString().padStart(4, '0');
+
+    // Return the formatted invoice number
+    return `BEX/${yearRange}/${paddedSeq}`;
+}
+
   
 
 module.exports = {
@@ -568,5 +584,6 @@ module.exports = {
     addComponentsForSampleItem,
     generateCustomsInvoiceLineItemsHtml,
     generateInvoiceNumber,  
-    numberToWords
+    numberToWords,
+    generateInvoiceNumber
 };
