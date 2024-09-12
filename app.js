@@ -17,7 +17,7 @@ mongoose.connect(process.env.DB_QUERY_STRING, {
 }).then(() => {
   console.log('Connected to MongoDB');
 }).catch((err) => {
-  console.error('MongoDB connection error:', err);
+  console.error('MongoDB connection error: ', err);
 });
 const db = mongoose.connection;
 db.on('error', console.error.bind(console, 'MongoDB connection error:'));
