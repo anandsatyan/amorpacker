@@ -19,11 +19,12 @@ router.get('/', async (req, res) => {
         });
 
         const orders = response.data.orders;
+
         let orderHtml = `
         <style>
             body {
                 font-family: 'Helvetica', 'Arial';
-                font-size: 8pt !important;
+                font-size: 10pt !important;
             }
             .header-container {
                 display: flex;
@@ -139,7 +140,6 @@ router.get('/', async (req, res) => {
             const formattedDate = new Date(order.created_at).toLocaleDateString('en-GB', {
                 day: '2-digit',
                 month: 'short',
-                year: 'numeric'
             });
 
             const tags = order.tags ? order.tags.split(',').map(tag => tag.trim()).join(', ') : 'No tags';
@@ -161,7 +161,7 @@ router.get('/', async (req, res) => {
             const rowBgColor = index % 2 === 0 ? '#fdfdfd' : '#ffffff';
 
             orderHtml += `
-                <tr style="background-color: ${rowBgColor}; font-size: 8pt !important;">
+                <tr style="background-color: ${rowBgColor}; font-size: 10pt !important;">
                     <td style="padding: 8px; border-bottom: 1px solid #ddd;">${order.name}</td>
                     <td style="padding: 8px; border-bottom: 1px solid #ddd;">${formattedDate}</td>
                     <td style="padding: 8px; border-bottom: 1px solid #ddd;">${customerName}</td>
@@ -437,32 +437,124 @@ const filterOrdersByMonth = (orders, month) => {
 
 // Route to fetch and display orders for a specific month
 router.get('/all', async (req, res) => {
-  try {
-      const allOrders = await fetchAllOrders(`${SHOPIFY_API_URL}/orders.json?status=any&order=created_at+desc`);
-      
-      const lastFourMonths = getLastFourMonths();
-      let selectedMonth = req.query.month || lastFourMonths[0]; // Default to the current month if no query parameter is present
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
+    
+    try {
+        const allOrders = await fetchAllOrders(`${SHOPIFY_API_URL}/orders.json?status=any&order=created_at+desc`);
+        const lastFourMonths = getLastFourMonths();
+        let selectedMonth = req.query.month || lastFourMonths[0]; // Default to the current month if no query parameter is present
 
-      // Filter orders for the selected month and calculate total sales
-      const { filteredOrders, totalSales } = filterOrdersByMonth(allOrders, selectedMonth);
+        // Filter orders for the selected month and calculate total sales
+        const { filteredOrders, totalSales } = filterOrdersByMonth(allOrders, selectedMonth);
 
-      let orderHtml = `
-          <style>body {font-family: 'Helvetica', 'Arial'; font-size: 8pt !important;}</style>
-          <h1>Orders for ${selectedMonth}</h1>
-          <div>
-              ${lastFourMonths.map(month => `<a href="?month=${encodeURIComponent(month)}">${month}</a>`).join(' | ')}
-          </div>
-      `;
+        let orderHtml = `
+        <style>
+            body {
+                font-family: 'Helvetica', 'Arial';
+                font-size: 10pt !important;
+            }
+            .header-container {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .header-container h1 {
+                margin: 0;
+            }
+            .header-container a {
+                text-decoration: none;
+                color: #000;
+                font-size: 8pt !important;
+            }
+            tr:hover {
+                background-color: #e0e0e0 !important;
+            }
+            /* Add spinner styles */
+            #loader {
+                position: fixed;
+                left: 50%;
+                top: 50%;
+                transform: translate(-50%, -50%);
+                display: none; /* Hidden by default */
+                z-index: 9999;
+            }
 
-      // Display order count and total sales for the selected month
-      orderHtml += `<p><strong>Order Count:</strong> ${filteredOrders.length} | <strong>Total Sales:</strong> $${totalSales.toFixed(2)}</p>`;
+            /* Spinner styling */
+            .spinner {
+                border: 4px solid rgba(0, 0, 0, 0.1);
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                border-left-color: #000;
+                animation: spin 1s linear infinite;
+            }
 
-      // Check if there are orders for the selected month
-      if (filteredOrders.length > 0) {
-          orderHtml += `
-              <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-                <thead>
-                  <tr style="background-color: #f2f2f2; font-size: 8pt !important;">
+            /* Keyframes for spinner animation */
+            @keyframes spin {
+                0% {
+                    transform: rotate(0deg);
+                }
+                100% {
+                    transform: rotate(360deg);
+                }
+            }
+        </style>
+        <script>
+            window.addEventListener('pageshow', function(event) {
+                if (event.persisted || window.performance && window.performance.navigation.type === 2) {
+                    // If the page is being loaded from the cache, reload it
+                    window.location.reload();
+                }
+            });
+            document.addEventListener('DOMContentLoaded', function() {
+                // Attach event listener to all "Create" buttons
+                document.querySelectorAll('.create-invoice-button').forEach(button => {
+                    button.addEventListener('click', async function() {
+                        const orderId = this.getAttribute('data-order-id');
+                        const loader = document.getElementById('loader'); // Get the loader element
+
+                        try {
+                            loader.style.display = 'block';
+                            // Make a request to the server to generate and save the invoice
+                            const response = await fetch("/orders/create-invoice/" + orderId, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                }
+                            });
+
+                            const result = await response.json();
+                            loader.style.display = 'none';
+
+                            if (response.ok) {
+                                alert('Invoice created successfully!');
+                                const invoiceId = result.invoiceId; // Assuming your API returns the invoiceId
+                                window.location.href = '/invoices/' + orderId + '/' + invoiceId;
+                            } else {
+                                alert('Error creating invoice: ' + result.message);
+                            }
+                        } catch (error) {
+                            console.error('Error creating invoice:', error);
+                            alert('Error creating invoice: ' + error.message);
+                        }
+                    });
+                });
+            });
+        </script>
+
+        <div class="header-container">
+            <h1>Orders for ${selectedMonth}</h1>
+            <div>
+                ${lastFourMonths.map(month => `<a href="?month=${encodeURIComponent(month)}">${month}</a>`).join(' | ')}
+            </div>
+        </div>
+        <p><strong>Order Count:</strong> ${filteredOrders.length} | <strong>Total Sales:</strong> $${totalSales.toFixed(2)}</p>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+            <thead>
+                <tr style="background-color: #f2f2f2; font-size: 8pt !important;">
                     <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Order Name</th>
                     <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Date</th>
                     <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Customer Name</th>
@@ -470,58 +562,68 @@ router.get('/all', async (req, res) => {
                     <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Destination</th>
                     <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Total Price</th>
                     <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Actions</th>
-                    <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Invoice</th>
-                  </tr>
-                </thead>
-                <tbody>
-          `;
-
-          filteredOrders.forEach((order, index) => {
-              const formattedDate = new Date(order.created_at).toLocaleDateString('en-GB', {
-                  day: '2-digit',
-                  month: 'short',
-                  year: 'numeric'
-              });
-
-              const tags = order.tags ? order.tags.split(',').map(tag => tag.trim()).join(', ') : 'No tags';
-              const customerName = order.customer ? `${order.customer.first_name} ${order.customer.last_name}` : 'Guest';
-              const destination = order.shipping_address ? `${order.shipping_address.country}` : 'No destination';
-
-              const rowBgColor = index % 2 === 0 ? '#fdfdfd' : '#ffffff';
-
-              orderHtml += `
-                <tr style="background-color: ${rowBgColor}; font-size: 9pt !important;">
-                  <td style="padding: 8px; border-bottom: 1px solid #ddd;">${order.name}</td>
-                  <td style="padding: 8px; border-bottom: 1px solid #ddd;">${formattedDate}</td>
-                  <td style="padding: 8px; border-bottom: 1px solid #ddd;">${customerName}</td>
-                  <td style="padding: 8px; border-bottom: 1px solid #ddd;">${tags}</td>
-                  <td style="padding: 8px; border-bottom: 1px solid #ddd;">${destination}</td>
-                  <td style="padding: 8px; border-bottom: 1px solid #ddd;">$${order.total_price}</td>
-                  <td style="padding: 8px; border-bottom: 1px solid #ddd;"><a href="/generate-packing-slip/${order.id}">Slip</a></td>
-                  <td style="padding: 8px; border-bottom: 1px solid #ddd;"><a href="/generate-customs-invoice/${order.id}" target="_blank">Invoice</a></td>
+                    <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Invoices</th>
                 </tr>
-              `;
-          });
+            </thead>
+            <tbody>
+        `;
 
-          orderHtml += `
-                </tbody>
-              </table>
-              <style>
-                  tr:hover {
-                  background-color: #e0e0e0 !important;
-                  }
-              </style>
-          `;
-      } else {
-          orderHtml += `<p>No orders for this month.</p>`;
-      }
+        let index = 0; 
 
-      res.send(orderHtml);
-  } catch (error) {
-      console.error(error.message);
-      res.status(500).send('Error fetching orders');
-  }
+        for (const order of allOrders) {
+            const formattedDate = new Date(order.created_at).toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+            });
+
+            const tags = order.tags ? order.tags.split(',').map(tag => tag.trim()).join(', ') : 'No tags';
+            const customerName = order.customer ? `${order.customer.first_name} ${order.customer.last_name}` : 'Guest';
+            const destination = order.shipping_address ? `${order.shipping_address.country}` : 'No destination';
+            const invoices = await Invoice.find({ orderId: order.id });
+            let invoicesHtml = '';
+            invoicesHtml = invoices.length > 0 ? invoices.map(invoice => `
+                <a href="/invoices/${order.id}/${invoice._id}">
+                    ${invoice.invoiceNumber}
+                </a>&nbsp;
+            `).join('') : 'No Invoices';
+
+            const rowBgColor = index % 2 === 0 ? '#fdfdfd' : '#ffffff';
+
+            orderHtml += `
+                <tr style="background-color: ${rowBgColor}; font-size: 10pt !important;">
+                    <td style="padding: 8px; border-bottom: 1px solid #ddd;">${order.name}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #ddd;">${formattedDate}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #ddd;">${customerName}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #ddd;">${tags}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #ddd;">${destination}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #ddd;">$${order.total_price}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #ddd;">
+                        <a href="/generate-packing-slip/${order.id}">Slip</a>
+                    </td>
+                    <td style="padding: 8px; border-bottom: 1px solid #ddd;">
+                        <button class="create-invoice-button" data-order-id="${order.id}">Create</button>
+                        ${invoicesHtml}
+                    </td>
+                </tr>
+            `;
+            index++; 
+        };
+
+        orderHtml += `
+            </tbody>
+        </table>
+        <div id="loader">
+            <div class="spinner"></div>
+        </div>
+        `;
+
+        res.send(orderHtml);
+    } catch (error) {
+        console.error("Error fetching orders:", error.response ? error.response.data : error.message);
+        res.status(500).send('Error fetching orders');
+    }
 });
+
 
 
 

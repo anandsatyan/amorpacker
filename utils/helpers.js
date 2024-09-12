@@ -1,6 +1,7 @@
 // utils/helpers.js
 const axios = require('axios');
 const { SHOPIFY_API_URL, ACCESS_TOKEN } = require('../shopifyConfig');
+const InvoiceCounter = require('../models/InvoiceCounter');
 
 // Helper function to introduce a delay
 function delay(ms) {
@@ -550,7 +551,6 @@ function numberToWords(num) {
     return result;
 }
 
-const Counter = require('../models/counter');
 
 async function generateInvoiceNumber() {
     const currentYear = new Date().getFullYear();
@@ -559,7 +559,7 @@ async function generateInvoiceNumber() {
     const yearRange = `${currentYear.toString().slice(-2)}-${nextYear.toString().slice(-2)}`;
 
     // Find the counter in the database and increment the sequence number
-    const counter = await Counter.findOneAndUpdate(
+    const counter = await InvoiceCounter.findOneAndUpdate(
         { name: 'invoiceNumber' }, 
         { $inc: { seq: 1 } }, 
         { new: true, upsert: true }  // Create the document if it doesn't exist
