@@ -190,7 +190,7 @@ router.get('/', async (req, res) => {
 
         res.send(orderHtml);
     } catch (error) {
-        console.error("Error fetching orders:", error.response ? error.response.data : error.message);
+        console.error("Error fetching orders: ", error.response ? error.response.data : error.message);
         res.status(500).send('Error fetching orders');
     }
 });
