@@ -28,6 +28,7 @@ db.once('open', () => {
 // Import routes
 const homeRoute = require('./routes/home');
 const ordersRoute = require('./routes/orders');
+const csbvRoute = require('./routes/csbv');
 const packingSlipRoute = require('./routes/packingSlip');
 const customsInvoiceRoute = require('./routes/customsInvoice');
 const createFedexShipment = require('./routes/createFedexShipment'); // Adjust the path if necessary
@@ -46,6 +47,9 @@ app.use('/uploads', express.static('uploads'));
 
 // Orders route
 app.use('/orders', ordersRoute);
+
+// Orders route
+app.use('/csbv', csbvRoute);
 
 // Packing slip route
 app.use('/packing-slips', packingSlipRoute);

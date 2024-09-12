@@ -211,10 +211,13 @@ router.get('/:orderId/:invoiceId', async (req, res) => {
                   // Get the updated HTML content including the values of the editable spans
                   const invoiceContent = document.getElementById('printableInvoiceArea').innerHTML; 
 
-                  const orderId = '${orderId}';  // Ensure you have this value dynamically available
-                  const invoiceNumber = '${invoiceNumber}';  // Ensure you have this dynamically
-                  const invoiceDate = '${invoiceDate}';  // Ensure you have this dynamically
+                  const orderId = '${orderId}'; 
+                  const invoiceNumber = '${invoiceNumber}';
+                  const invoiceDate = '${invoiceDate}';  
                   const invoiceId = '${invoiceId}';
+                  const customerName = '${shippingAddress.name}';
+                  const orderName = '${order.name}';
+
 
                   try {
                     // Show loader (optional)
@@ -228,9 +231,11 @@ router.get('/:orderId/:invoiceId', async (req, res) => {
                       },
                       body: JSON.stringify({
                         orderId: orderId,
-                        invoiceId: invoiceId,
+                        _id: invoiceId,
                         invoiceNumber: invoiceNumber,
                         invoiceDate: invoiceDate,
+                        customerName: customerName,
+                        orderName: orderName,
                         htmlContent: invoiceContent
                       })
                     });
@@ -544,9 +549,8 @@ router.get('/:orderId/:invoiceId', async (req, res) => {
       }
       else {
         console.log(`Invoice for Order ID ${orderId} and ${invoiceId} found in the database.`);
-
         customsInvoiceHtml +=  `<div id="printableInvoiceArea" class="wrapper invoice-container" contentEditable="true">`;
-        customsInvoiceHtml += existingInvoice.invoiceHtml;
+        customsInvoiceHtml += existingInvoice.htmlContent;
         customsInvoiceHtml +=  `</div>`;
       }
       customsInvoiceHtml += `             
@@ -561,31 +565,43 @@ router.get('/:orderId/:invoiceId', async (req, res) => {
   
 );
 
+
 router.post('/save-invoice', async (req, res) => {
-  console.log('POST /save-invoice hit');
+  const { orderId, invoiceId, invoiceNumber, invoiceDate, customerName, orderName, htmlContent } = req.body;
+
   try {
-    const { orderId, invoiceId, invoiceNumber, invoiceDate, htmlContent } = req.body;
-    console.log('Received data:', req.body);  // Log the incoming data
+    // Check if the invoice already exists
+    let invoice = await Invoice.findOne({ invoiceId });
 
-    // Check if an invoice for this orderId already exists
-    const existingInvoice = await Invoice.findOne({ orderId: orderId, _id: invoiceId });
+    if (invoice) {
+      // Update existing invoice
+      invoice.orderId = orderId;
+      invoice.invoiceNumber = invoiceNumber;
+      invoice.invoiceDate = invoiceDate;
+      invoice.customerName = customerName;
+      invoice.orderName = orderName;
+      invoice.htmlContent = htmlContent;
+    } else {
+      // Create new invoice
+      invoice = new Invoice({
+        orderId,
+        invoiceId,
+        invoiceNumber,
+        invoiceDate,
+        customerName,
+        orderName,
+        htmlContent
+      });
+    }
 
-    if (existingInvoice) {
-      // If the invoice exists, update it
-      existingInvoice.invoiceNumber = invoiceNumber;
-      existingInvoice.invoiceDate = invoiceDate;
-      existingInvoice.invoiceHtml = htmlContent;
-      await existingInvoice.save();
-      console.log('Invoice updated successfully!');
-      return res.status(200).json({ message: 'Invoice updated successfully!' });
-    }  
+    // Save the invoice to the database
+    await invoice.save();
+
+    res.json({ message: 'Invoice saved successfully!' });
   } catch (error) {
     console.error('Error saving invoice:', error);
     res.status(500).json({ message: 'Error saving invoice', error });
   }
 });
-
-
-
 
 module.exports = router;

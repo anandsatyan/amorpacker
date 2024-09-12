@@ -361,13 +361,19 @@ router.post('/create-invoice/:orderId', async (req, res) => {
               <img id="brandImage" src="https://cdn.shopify.com/s/files/1/0857/0984/8873/files/BRANDSAMOR_COMMERCE_L.L.P..png?v=1722773361" width="150px" />
           </div>
       </div>`;
-  
       // Save the new invoice to the database
       const newInvoice = new Invoice({
         orderId: orderId,
         invoiceNumber: invoiceNumber,
         invoiceDate: invoiceDate,
-        invoiceHtml: invoiceHtml,
+        htmlContent: invoiceHtml,
+        invoiceDate: new Date(order.created_at).toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+          }),
+        customerName: shippingAddress.name,
+        orderName: order.name
       });
   
       await newInvoice.save();
