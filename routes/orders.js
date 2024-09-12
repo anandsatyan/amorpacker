@@ -381,58 +381,57 @@ router.post('/create-invoice/:orderId', async (req, res) => {
 });
 
 
-// Utility function to fetch all pages of orders
-const fetchAllOrders = async (url, orders = []) => {
-  try {
-      const response = await axios.get(url, {
-          headers: {
-              'X-Shopify-Access-Token': ACCESS_TOKEN,
-          },
-      });
 
-      const newOrders = response.data.orders;
-      orders = orders.concat(newOrders);
-
-      // Check for pagination in the Link header
-      const linkHeader = response.headers['link'];
-      if (linkHeader) {
-          const nextPageLink = linkHeader.split(',').find((s) => s.includes('rel="next"'));
-          if (nextPageLink) {
-              const nextPageUrl = nextPageLink.split(';')[0].trim().slice(1, -1);
-              return fetchAllOrders(nextPageUrl, orders);
-          }
-      }
-
-      return orders;
-  } catch (error) {
-      console.error("Error fetching orders:", error.response ? error.response.data : error.message);
-      throw new Error('Error fetching orders');
-  }
-};
-
-// Function to get the last four months
+// Function to get the last four months in "YYYY-MM" format
 const getLastFourMonths = () => {
-  const months = [];
-  const now = new Date();
-  for (let i = 0; i < 4; i++) {
-      const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      months.push(month.toLocaleString('default', { month: 'long', year: 'numeric' }));
-  }
-  return months;
+    const months = [];
+    const now = new Date();
+    for (let i = 0; i < 4; i++) {
+        const month = new Date(now.getFullYear(), now.getMonth() + 1 - i, 1);
+        months.push(month.toISOString().slice(0, 7)); // "YYYY-MM"
+    }
+    return months;
 };
 
 // Function to filter orders by month and calculate total sales
 const filterOrdersByMonth = (orders, month) => {
-  const filteredOrders = orders.filter(order => {
-      const orderDate = new Date(order.created_at);
-      const orderMonth = orderDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-      return orderMonth === month;
-  });
+    const filteredOrders = orders.filter(order => {
+        const orderDate = new Date(order.created_at);
+        const orderMonth = orderDate.toISOString().slice(0, 7); // "YYYY-MM"
+        return orderMonth === month;
+    });
 
-  // Calculate total sales for the filtered orders
-  const totalSales = filteredOrders.reduce((sum, order) => sum + parseFloat(order.total_price), 0);
+    const totalSales = filteredOrders.reduce((sum, order) => sum + parseFloat(order.total_price), 0);
+    return { filteredOrders, totalSales };
+};
 
-  return { filteredOrders, totalSales };
+// Utility function to fetch all pages of orders
+const fetchAllOrders = async (url, orders = []) => {
+    try {
+        const response = await axios.get(url, {
+            headers: {
+                'X-Shopify-Access-Token': ACCESS_TOKEN,
+            },
+        });
+
+        const newOrders = response.data.orders;
+        orders = orders.concat(newOrders);
+
+        // Check for pagination in the Link header
+        const linkHeader = response.headers['link'];
+        if (linkHeader) {
+            const nextPageLink = linkHeader.split(',').find((s) => s.includes('rel="next"'));
+            if (nextPageLink) {
+                const nextPageUrl = nextPageLink.split(';')[0].trim().slice(1, -1);
+                return fetchAllOrders(nextPageUrl, orders);
+            }
+        }
+
+        return orders;
+    } catch (error) {
+        console.error("Error fetching orders:", error.response ? error.response.data : error.message);
+        throw new Error('Error fetching orders');
+    }
 };
 
 // Route to fetch and display orders for a specific month
