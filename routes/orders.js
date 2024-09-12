@@ -156,7 +156,7 @@ router.get('/', async (req, res) => {
                     `;
                 });
             } else {
-                invoicesHtml = 'No Invoices';
+                invoicesHtml = '<small>No Invoices</small>';
             }
             const rowBgColor = index % 2 === 0 ? '#fdfdfd' : '#ffffff';
 
@@ -585,7 +585,7 @@ router.get('/all', async (req, res) => {
                 <a href="/invoices/${order.id}/${invoice._id}">
                     ${invoice.invoiceNumber}
                 </a>&nbsp;
-            `).join('') : 'No Invoices';
+            `).join('') : '<small>No Invoices</small>';
 
             const rowBgColor = index % 2 === 0 ? '#fdfdfd' : '#ffffff';
 
