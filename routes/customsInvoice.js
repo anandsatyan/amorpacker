@@ -1,6 +1,7 @@
 const express = require('express');
 const axios = require('axios');
 const router = express.Router();
+const mongoose = require('mongoose'); 
 const { SHOPIFY_API_URL, ACCESS_TOKEN } = require('../shopifyConfig');
 const { generateCustomsInvoiceLineItemsHtml, generateInvoiceNumber, numberToWords } = require('../utils/helpers');
 const Invoice = require('../models/invoice');  // Import the model
@@ -71,292 +72,16 @@ router.get('/:orderId/:invoiceId', async (req, res) => {
             </style>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
             <script>
-              window.onload = function() {
-                // Ensure the button exists before adding an event listener
-                const createAWBButton = document.getElementById('createAWBButton');
-                if (createAWBButton) {
-                  console.log("Create AWB button found, adding event listener.");
-
-                  // Function to create AWB
-                  createAWBButton.addEventListener('click', async () => {
-                    const orderId = '${orderId}';
-                    document.getElementById('loader').style.display = 'block';
-                    console.log("AWB creation initiated for orderId:", orderId);
-
-                    const packages = [];
-                    let hasInvalidPackage = false; // Flag to track if there's any invalid package
-
-                    document.querySelectorAll('.package-item').forEach(packageItem => {
-                      const weight = parseFloat(packageItem.querySelector('.package-weight').value) || 0;
-                      const length = parseFloat(packageItem.querySelector('.package-length').value) || 0;
-                      const width = parseFloat(packageItem.querySelector('.package-width').value) || 0;
-                      const height = parseFloat(packageItem.querySelector('.package-height').value) || 0;
-
-                      // Check if all fields are filled
-                      if (weight > 0 && length > 0 && width > 0 && height > 0) {
-                        // Only add complete packages
-                        packages.push({
-                          weight,
-                          dimensions: {
-                            length,
-                            width,
-                            height,
-                          }
-                        });
-                      } else {
-                        hasInvalidPackage = true; // Mark as invalid if any field is missing
-                        packageItem.remove(); // Remove incomplete package from the UI
-                      }
-                    });
-
-                    if (hasInvalidPackage) {
-                      alert('Some packages were incomplete and have been removed. Please review your package details.');
-                      document.getElementById('loader').style.display = 'none';
-                    }
-
-                    if (packages.length === 0) {
-                      alert('No valid packages to send. Please add package details.');
-                      document.getElementById('loader').style.display = 'none';
-                      return;
-                    }
-
-                    try {
-                        // Fetch request to create a shipment
-                        const response = await fetch('/create-shipment', {
-                          method: 'POST',
-                          headers: {
-                            'Content-Type': 'application/json'
-                          },
-                          body: JSON.stringify({ orderId, packages })
-                        });
-
-                        // Parse the response as JSON
-                        const result = await response.json();
-                        console.log("AWB response received:", result);
-
-                        if (response.ok && result.shipmentDetails && result.shipmentDetails.output) {
-                          const transactionShipments = result.shipmentDetails.output.transactionShipments;
-
-                          if (transactionShipments && transactionShipments.length > 0) {
-                            // Extract the master tracking number (AWB number) from the first transaction shipment
-                            const awbNumber = transactionShipments[0].masterTrackingNumber;
-                            // Alert or display AWB number
-                            alert('AWB created successfully! AWB Number: ' + awbNumber);
-                          } else {
-                            alert('Error: Transaction shipments not found in the response.');
-                          }
-                        } else {
-                          // If the response is not OK, display the error
-                          alert('Error creating AWB: ' + (result.error || 'Unknown error'));
-                        }
-                      } catch (error) {
-                        // Catch any errors during the fetch or JSON parsing
-                        console.error('Error creating AWB:', error.message);
-                        alert('Error creating AWB: ' + error.message);
-                      } finally {
-                        // Hide the loader regardless of success or error
-                        document.getElementById('loader').style.display = 'none';
-                      }
-
-                  });
-                } else {
-                  console.error("Create AWB button not found.");
-                }
-                  // Function to handle Add Package button click
-                const addPackageButton = document.getElementById('addPackageButton');
-                if (addPackageButton) {
-                    console.log("Add Package button found, adding event listener.");
-                    addPackageButton.addEventListener('click', function() {
-                        const packageList = document.getElementById('packageList');
-                        const listItem = document.createElement('li');
-                        listItem.className = 'package-item';
-
-                      // Add input fields for weight and dimensions along with a remove button
-                      listItem.innerHTML = \`
-                          <div style="margin-bottom: 10px;">
-                              <span style="border: 1px solid #CCC; padding: 10px;">
-                                  <label>Weight (kg):</label>
-                                  <input type="number" class="package-weight" min="0" step="0.01" style="width: 60px;" required />
-                                  <label>Length (cm):</label>
-                                  <input type="number" class="package-length" min="0" style="width: 60px;" required />
-                                  <label>Width (cm):</label>
-                                  <input type="number" class="package-width" min="0" style="width: 60px;" required />
-                                  <label>Height (cm):</label>
-                                  <input type="number" class="package-height" min="0" style="width: 60px;" required />
-                                  <button type="button" class="remove-package-button hide-in-print">Remove</button>
-                              </span>
-                          </div>
-                      \`;
-
-                      // Append the new package item to the list
-                      packageList.appendChild(listItem);
-
-                      // Attach event listeners to the new input fields
-                      listItem.querySelector('.package-weight').addEventListener('input', updateNetWeight);
-                      listItem.querySelector('.remove-package-button').addEventListener('click', function() {
-                          // Remove this package item
-                          listItem.remove();
-                          
-                          // Update the number of packages and net weight
-                          updatePackageCount();
-                      });
-
-                      // Update the number of packages
-                      updatePackageCount();
-                  });
-                } else {
-                    console.error("Add Package button not found.");
-                }
+              window.onload = function() {                
                 const inputValues = ${JSON.stringify(existingInvoice.inputValues || {})};
                 const inputs = document.querySelectorAll('input');
-                inputs.forEach((input, index) => {
-                  const key = \`input_\${index}\`;
-                  if (inputValues[key]) {
-                    input.value = inputValues[key];
-                  }
-                });
-                document.getElementById('saveInvoiceButton').addEventListener('click', async () => {
-                  const inputValues = {};
-                  document.querySelectorAll('input').forEach((input, index) => {
-                    inputValues[\`input_\${index}\`] = input.value;
-                  });
-                  // Get the updated HTML content including the values of the editable spans
-                  const invoiceContent = document.getElementById('printableInvoiceArea').innerHTML; 
-
-                  const orderId = '${orderId}'; 
-                  const invoiceNumber = '${invoiceNumber}';
-                  const invoiceDate = '${invoiceDate}';  
-                  const invoiceId = '${invoiceId}';
-                  const customerName = '${shippingAddress.name}';
-                  const orderName = '${order.name}';
-
-
-                  try {
-                    // Show loader (optional)
-                    document.getElementById('loader').style.display = 'block';
-
-                    // Send the updated invoice HTML to the backend
-                    const response = await fetch('/invoices/save-invoice', {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                      },
-                      body: JSON.stringify({
-                        orderId: orderId,
-                        _id: invoiceId,
-                        invoiceNumber: invoiceNumber,
-                        invoiceDate: invoiceDate,
-                        customerName: customerName,
-                        orderName: orderName,
-                        htmlContent: invoiceContent,
-                        inputValues: inputValues
-                      })
-                    });
-
-                    const result = await response.json();
-                    document.getElementById('loader').style.display = 'none';  // Hide loader
-                    if (response.ok) {
-                      alert(result.message);  // Success message
-                    } else {
-                      alert('Error saving invoice: ' + result.message);
+                let i=0;
+                for (i = 0; i < inputs.length; i++) {
+                    const key = "input_" + i;
+                    if (inputValues[key]) {
+                        inputs[i].value = inputValues[key];  // Set saved value
                     }
-                  } catch (error) {
-                    document.getElementById('loader').style.display = 'none';  // Hide loader
-                    console.error('Error saving invoice:', error);
-                    alert('Error saving invoice: ' + error.message);
-                  }
-                });
-
-
-                document.getElementById('generatePdfButton').addEventListener('click', () => {
-                    console.log("PDF GENERATING...");
-
-                    // Retrieve order and customer names
-                    const orderName = '${order.name}';
-                    const customerName = '${shippingAddress.name}';
-
-                    // Define the file name using the pattern: orderName-customerName.pdf
-                    const fileName = \`\${orderName}-\${customerName}.pdf\`;
-
-                    // Get the content to be converted into PDF
-                    const invoiceContent = document.getElementById('printableInvoiceArea');
-
-                    // Ensure all images are fully loaded before generating PDF
-                    const images = invoiceContent.getElementsByTagName('img');
-                    const imagePromises = Array.from(images).map(img => {
-                        return new Promise((resolve, reject) => {
-                            if (img.complete) {
-                                resolve();
-                            } else {
-                                img.onload = resolve;
-                                img.onerror = reject;
-                            }
-                        });
-                    });
-
-                    // Wait for all images to load before creating PDF
-                    Promise.all(imagePromises)
-                        .then(() => {
-                            const options = {
-                                margin: 0.5,
-                                filename: fileName,
-                                image: { type: 'jpeg', quality: 0.98 },
-                                html2canvas: { scale: 2 },
-                                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-                            };
-
-                            // Convert content to PDF and download
-                            html2pdf().from(invoiceContent).set(options).save();
-                        })
-                        .catch((error) => {
-                            console.error('Error loading images:', error);
-                            alert('Failed to load all images, please try again.');
-                        });
-                });
-
-
-                // Function to update the number of packages
-                function updatePackageCount() {
-                    const numberOfPackages = document.querySelectorAll('.package-item').length;
-                    document.querySelector('span[name="noOfPackages"]').textContent = numberOfPackages;
-
-                    // Update the net weight
-                    updateNetWeight();
                 }
-
-                // Function to update the net weight
-                function updateNetWeight() {
-                  const packageWeights = document.querySelectorAll('.package-weight');
-                  let totalWeight = 0;
-                  packageWeights.forEach(input => {
-                    totalWeight += parseFloat(input.value) || 0;
-                  });
-                  
-                  document.querySelector('span[name="grossWeight"]').textContent = totalWeight.toFixed(2);
-                  
-                  const numberOfPackages = document.querySelectorAll('.package-item').length;
-                  const netWeight = totalWeight - (numberOfPackages * 0.25);  // Example calculation
-                  document.querySelector('span[name="netWeight"]').textContent = netWeight.toFixed(2);
-                }
-
-                // Initial call to set package count and weight on load
-                updatePackageCount();
-
-                // Function to validate and print invoice
-                function validateAndPrint() {
-                  const grossWeight = document.getElementsByName("grossWeight")[0].value;
-                  const netWeight = document.getElementsByName("netWeight")[0].value;
-                  const noOfPackages = document.getElementsByName("noOfPackages")[0].value;
-
-                  if (grossWeight === "" || netWeight === "" || noOfPackages === "") {
-                    alert("Please fill in all fields before printing the invoice.");
-                  } else {
-                    window.print();
-                  }
-                }
-
-                // Event listener for Print Invoice button
-                document.querySelector('button[onClick="validateAndPrint()"]').addEventListener('click', validateAndPrint);
                 function addLineItem() {
                   const tbody = document.getElementById('invoiceItems');
                   const row = document.createElement('tr');
@@ -406,6 +131,73 @@ router.get('/:orderId/:invoiceId', async (req, res) => {
 
                   calculateTotalAmount(); // Recalculate the total amount after adding a new row
                 }
+
+
+                i=0;
+                document.getElementById('saveInvoiceButton').addEventListener('click', async () => {
+                  
+                    const inputs = document.querySelectorAll('input');
+
+                    // Loop through all input fields and update their value attributes with the current values
+                    inputs.forEach(input => {
+                        input.setAttribute('value', input.value);
+                    });
+
+                    const grossWeightSpan = document.querySelector('span[name="grossWeight"]');
+                    const netWeightSpan = document.querySelector('span[name="netWeight"]');
+                    grossWeightSpan.textContent = document.querySelector('span[name="grossWeight"]').textContent;
+                    netWeightSpan.textContent = document.querySelector('span[name="netWeight"]').textContent;
+                    document.querySelector('span[name="grossWeight"]').textContent = grossWeightSpan.textContent;
+                    document.querySelector('span[name="netWeight"]').textContent = netWeightSpan.textContent;
+                    
+                    const invoiceContent = document.getElementById('printableInvoiceArea').innerHTML;
+                    const orderId = '${orderId}'; 
+                    const invoiceNumber = '${invoiceNumber}';
+                    const invoiceDate = '${new Date(order.created_at).toLocaleDateString('en-GB', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric'
+                    })}';  
+                    const invoiceId = '${invoiceId}';
+                    const customerName = '${shippingAddress.name}';
+                    const orderName = '${order.name}';
+
+                    try {
+                      document.getElementById('loader').style.display = 'block';
+                      console.log("INVOICE CONTENT IS ");
+                      console.log(invoiceContent);
+                      // Send the updated invoice HTML to the backend
+                      const response = await fetch('/invoices/save-invoice', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                          orderId,
+                          invoiceId,
+                          invoiceNumber,
+                          invoiceDate,
+                          customerName,
+                          orderName,
+                          htmlContent: invoiceContent,  // This now contains updated weights
+                          inputValues
+                        })
+                      });
+
+                      const result = await response.json();
+                      document.getElementById('loader').style.display = 'none';  // Hide loader
+                      if (response.ok) {
+                        alert(result.message);  // Success message
+                      } else {
+                        alert('Error saving invoice: ' + result.message);
+                      }
+                    } catch (error) {
+                      document.getElementById('loader').style.display = 'none';  // Hide loader
+                      console.error('Error saving invoice:', error);
+                      alert('Error saving invoice: ' + error.message);
+                    }
+                  });
+                
                 function attachRemoveListeners() {
                   document.querySelectorAll('.remove-row-button button').forEach(button => {
                     button.addEventListener('click', function () {
@@ -535,19 +327,18 @@ router.get('/:orderId/:invoiceId', async (req, res) => {
         </head>
         <body>
             <div class="actions-div hide-in-print">
-              <button id="createAWBButton">Create Fedex AWB</button>
+              <button id="createAWBButton" style="display:none">Create Fedex AWB</button>
               <button onClick="validateAndPrint()">Print Invoice</button>
-              <button id="generatePdfButton">Download PDF</button>
+              <button id="generatePdfButton" style="display:none;">Download PDF</button>
             
-              <br />
-                <ul id="packageList" class="package-list" style="margin-top: 20px; list-style-type: none; padding: 0;margin-left: auto; margin-right: auto;">
+                <ul id="packageList" class="package-list" style="display:none; margin-top: 20px; list-style-type: none; padding: 0;margin-left: auto; margin-right: auto;">
                   <!-- Dynamic package items will be added here -->
-                </ul><br />
+                </ul>
                 <div class="package-management" style="text-align: center;">
-                  <button id="addPackageButton">Add Package</button>
+                  <button id="addPackageButton" style="display:none;">Add Package</button>
                 </div>
               </div>
-            <br /><br />
+            <br />
             <div class="hide-in-print" style="position:fixed; bottom: 10px; right: 10px;">
                 <button id="addRowButton" class="hide-in-print">Add Line Item</button>
                 <button id="saveInvoiceButton">Save Invoice</button>
@@ -581,13 +372,17 @@ router.get('/:orderId/:invoiceId', async (req, res) => {
 
 router.post('/save-invoice', async (req, res) => {
   const { orderId, invoiceId, invoiceNumber, invoiceDate, customerName, orderName, htmlContent, inputValues } = req.body;
-
+  console.log("HTML CONTENT IS ");
+  console.log(htmlContent);
   try {
     // Check if the invoice already exists
-    let invoice = await Invoice.findOne({ invoiceId });
+    console.log("Searching for Invoice with ID:", invoiceId);
+    const objectId = new mongoose.Types.ObjectId(invoiceId);    
+    let invoice = await Invoice.findOne({ _id: objectId });
 
     if (invoice) {
       // Update existing invoice
+      console.log("INVOICE EXISTS");
       invoice.orderId = orderId;
       invoice.invoiceNumber = invoiceNumber;
       invoice.invoiceDate = invoiceDate;
@@ -595,23 +390,9 @@ router.post('/save-invoice', async (req, res) => {
       invoice.orderName = orderName;
       invoice.htmlContent = htmlContent;
       invoice.inputValues = inputValues;  
-    } else {
-      // Create new invoice
-      invoice = new Invoice({
-        orderId,
-        invoiceId,
-        invoiceNumber,
-        invoiceDate,
-        customerName,
-        orderName,
-        htmlContent,
-        inputValues
-      });
+      await invoice.save();
+      console.log("INVOICE SAVED");
     }
-
-    // Save the invoice to the database
-    await invoice.save();
-
     res.json({ message: 'Invoice saved successfully!' });
   } catch (error) {
     console.error('Error saving invoice:', error);

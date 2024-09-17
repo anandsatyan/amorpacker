@@ -279,9 +279,9 @@ router.post('/create-invoice/:orderId', async (req, res) => {
                   </td>
                   <td>
                       <strong>Buyer (if other than consignee)</strong><br><br>
-                      <strong>Gross Wt:</strong> <span contentEditable="true" name="grossWeight" style="max-width: 40px;">0</span> kg<br>
-                      <strong>Net Wt:</strong> <span contentEditable="true" name="netWeight" style="max-width: 40px;">0</span> kg <br>
-                      <strong>No. of Pkgs:</strong> <span contentEditable="true" name="noOfPackages" style="max-width: 40px;">0</span>
+                      <strong contentEditable="false">Gross Wt:</strong><span contentEditable="true" name="grossWeight" style="max-width: 40px;">0</span> kg<br>
+                      <strong contentEditable="false">Net Wt:</strong><span contentEditable="true" name="netWeight" style="max-width: 40px;">0</span> kg <br>
+                      <strong contentEditable="false">No. of Pkgs:</strong><span contentEditable="true" name="noOfPackages" style="max-width: 40px;">0</span>
                   </td>
               </tr>
               <tr>
