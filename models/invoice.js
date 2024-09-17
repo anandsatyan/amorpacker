@@ -7,6 +7,7 @@ const invoiceSchema = new mongoose.Schema({
   customerName: { type: String, required: false },
   orderName: { type: String, required: true }, 
   htmlContent: { type: String, required: true },
+  inputValues: { type: Object, default: {} },
   isMaster: { type: Boolean, default: false },  
   masterInvoiceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Invoice' },  
 });

@@ -314,7 +314,7 @@ router.post('/create-invoice/:orderId', async (req, res) => {
                   </td>
                   <td style="font-size: 8pt !important">
                       <strong>Terms of Delivery & payment</strong><br>
-                      CIF
+                      FOB
                   </td>
               </tr>
           </table>

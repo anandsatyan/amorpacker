@@ -207,7 +207,19 @@ router.get('/:orderId/:invoiceId', async (req, res) => {
                 } else {
                     console.error("Add Package button not found.");
                 }
+                const inputValues = ${JSON.stringify(existingInvoice.inputValues || {})};
+                const inputs = document.querySelectorAll('input');
+                inputs.forEach((input, index) => {
+                  const key = \`input_\${index}\`;
+                  if (inputValues[key]) {
+                    input.value = inputValues[key];
+                  }
+                });
                 document.getElementById('saveInvoiceButton').addEventListener('click', async () => {
+                  const inputValues = {};
+                  document.querySelectorAll('input').forEach((input, index) => {
+                    inputValues[\`input_\${index}\`] = input.value;
+                  });
                   // Get the updated HTML content including the values of the editable spans
                   const invoiceContent = document.getElementById('printableInvoiceArea').innerHTML; 
 
@@ -236,7 +248,8 @@ router.get('/:orderId/:invoiceId', async (req, res) => {
                         invoiceDate: invoiceDate,
                         customerName: customerName,
                         orderName: orderName,
-                        htmlContent: invoiceContent
+                        htmlContent: invoiceContent,
+                        inputValues: inputValues
                       })
                     });
 
@@ -567,7 +580,7 @@ router.get('/:orderId/:invoiceId', async (req, res) => {
 
 
 router.post('/save-invoice', async (req, res) => {
-  const { orderId, invoiceId, invoiceNumber, invoiceDate, customerName, orderName, htmlContent } = req.body;
+  const { orderId, invoiceId, invoiceNumber, invoiceDate, customerName, orderName, htmlContent, inputValues } = req.body;
 
   try {
     // Check if the invoice already exists
@@ -581,6 +594,7 @@ router.post('/save-invoice', async (req, res) => {
       invoice.customerName = customerName;
       invoice.orderName = orderName;
       invoice.htmlContent = htmlContent;
+      invoice.inputValues = inputValues;  
     } else {
       // Create new invoice
       invoice = new Invoice({
@@ -590,7 +604,8 @@ router.post('/save-invoice', async (req, res) => {
         invoiceDate,
         customerName,
         orderName,
-        htmlContent
+        htmlContent,
+        inputValues
       });
     }
 
