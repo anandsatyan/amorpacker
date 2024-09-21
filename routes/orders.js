@@ -16,6 +16,7 @@ router.get('/', async (req, res) => {
             headers: {
                 'X-Shopify-Access-Token': ACCESS_TOKEN,
             },
+            family: 4
         });
 
         const orders = response.data.orders;

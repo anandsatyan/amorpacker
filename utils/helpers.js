@@ -573,6 +573,129 @@ async function generateInvoiceNumber() {
 }
 
   
+async function calculateComponentsForOrder(order) {
+    console.log("ORDER");
+    console.log(order);
+    try {
+        const componentsList = [];
+
+        // Helper function to push items into components list
+        const addItemToComponentsList = (data) => {
+            componentsList.push({
+                orderDate: order.created_at,
+                orderId: order.name,
+                internalProductCode: data.internalProductCode,
+                packagingListName: data.packagingListName,
+                quantity: data.quantity
+            });
+        };
+
+        // Iterate through each line item in the order
+        for (const item of order.line_items) {
+            let packingListName = item.title;
+            let internalProductCode = '';
+
+            // Check if the product has a valid product_id
+            if (item.product_id) {
+                // Fetch product metafields
+                const productMetafields = await fetchProductMetafields(item.product_id);
+
+                // Get internal product code and packaging list name from metafields
+                internalProductCode = productMetafields.find(
+                    (mf) => mf.namespace === "custom" && mf.key === "internal_product_code"
+                )?.value || item.sku; // Fallback to SKU if no internal product code
+
+                packingListName = productMetafields.find(
+                    (mf) => mf.namespace === "custom" && mf.key === "packing_list_name"
+                )?.value || item.title;
+
+                // Check if the product has components
+                const componentsMetafield = productMetafields.find(
+                    (mf) => mf.namespace === "custom" && mf.key === "components"
+                );
+
+                if (componentsMetafield && componentsMetafield.value) {
+                    const components = JSON.parse(componentsMetafield.value);
+                    if (Array.isArray(components) && components.length > 0) {
+                        // Process each component
+                        for (const componentGid of components) {
+                            const componentId = componentGid.split("/").pop();
+
+                            // Fetch the component product details
+                            const componentProductResponse = await axios.get(
+                                `${SHOPIFY_API_URL}/products/${componentId}.json`,
+                                {
+                                    headers: {
+                                        "X-Shopify-Access-Token": ACCESS_TOKEN,
+                                    },
+                                }
+                            );
+                            const componentProduct = componentProductResponse.data.product;
+
+                            // Fetch the metafields of the component
+                            const componentMetafields = await fetchProductMetafields(componentId);
+                            const componentInternalProductCode = componentMetafields.find(
+                                (mf) =>
+                                    mf.namespace === "custom" && mf.key === "internal_product_code"
+                            )?.value || componentProduct.variants[0].sku;
+
+                            const componentPackagingListName = componentMetafields.find(
+                                (mf) =>
+                                    mf.namespace === "custom" &&
+                                    mf.key === "packing_list_name"
+                            )?.value || componentProduct.title;
+
+                            // Add the component details to the components list
+                            addItemToComponentsList({
+                                internalProductCode: componentInternalProductCode,
+                                packagingListName: componentPackagingListName,
+                                quantity: item.quantity, // Use the parent item quantity
+                            });
+                        }
+                    }
+                } else {
+                    // No components, treat it as a regular product
+                    addItemToComponentsList({
+                        internalProductCode: internalProductCode,
+                        packagingListName: packingListName,
+                        quantity: item.quantity
+                    });
+                }
+            } else {
+                // Handle custom item logic (no product_id)
+                internalProductCode = item.sku || ''; // Use SKU or empty string if not available
+                addItemToComponentsList({
+                    internalProductCode: internalProductCode,
+                    packagingListName: item.title,
+                    quantity: item.quantity
+                });
+            }
+        }
+
+        // Return the final components list
+        return componentsList;
+
+    } catch (error) {
+        console.error(
+            "Error fetching product or component details:",
+            error.response ? error.response.data : error.message
+        );
+        throw error;
+    }
+}
+
+const getCurrentMonthDates = () => {
+    const now = new Date();  // Get the current date
+
+    // Start date: First day of the last month
+    const startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+
+    // End date: Last day of the last month
+    const endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59).toISOString();
+ 
+    return { startDate, endDate };
+};
+
 
 module.exports = {
     delay,
@@ -585,5 +708,7 @@ module.exports = {
     generateCustomsInvoiceLineItemsHtml,
     generateInvoiceNumber,  
     numberToWords,
-    generateInvoiceNumber
+    generateInvoiceNumber,
+    calculateComponentsForOrder,
+    getCurrentMonthDates
 };
