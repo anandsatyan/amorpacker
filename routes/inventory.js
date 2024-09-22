@@ -106,7 +106,6 @@ router.get('/view-orders', async (req, res) => {
 
 
 // Route to process a specific order and insert stock movement
-// Route to process a specific order and insert stock movement
 router.post('/process-order', async (req, res) => {
     try {
         const { orderName } = req.body;  // Extract orderName from request body
@@ -134,7 +133,7 @@ router.post('/process-order', async (req, res) => {
             year: 'numeric',
         });
 
-        const stockMovements = [];
+        const stockMovements = new Map();  // Use a Map to avoid duplicates
 
         // Process line items for the order
         for (const item of order.line_items) {
@@ -144,30 +143,43 @@ router.post('/process-order', async (req, res) => {
             // Fetch components for order (assume this is an async function)
             const components = await calculateComponentsForOrder(order);
 
-            const stockMovementEntries = components.length === 0
-                ? [{
-                    date: orderDate,
-                    orderId: order.name,  // Order Name is used here
-                    internalProductCode: item.sku || productName,
-                    packagingListName: productName,
-                    qtySold: qtySold,
-                }]
-                : components.map(component => ({
-                    date: orderDate,
-                    orderId: order.name,
-                    internalProductCode: component.internalProductCode,
-                    packagingListName: component.packagingListName,
-                    qtySold: component.quantity,
-                }));
-
-            stockMovements.push(...stockMovementEntries);
+            if (components.length === 0) {
+                // No components, add base product
+                const key = `${order.name}-${item.sku || productName}`;
+                if (!stockMovements.has(key)) {
+                    stockMovements.set(key, {
+                        date: orderDate,
+                        orderId: order.name,  // Order Name is used here
+                        internalProductCode: item.sku || productName,
+                        packagingListName: productName,
+                        qtySold: qtySold,
+                    });
+                }
+            } else {
+                // Add components instead of base product
+                for (const component of components) {
+                    const key = `${order.name}-${component.internalProductCode}`;
+                    if (!stockMovements.has(key)) {
+                        stockMovements.set(key, {
+                            date: orderDate,
+                            orderId: order.name,
+                            internalProductCode: component.internalProductCode,
+                            packagingListName: component.packagingListName,
+                            qtySold: component.quantity,
+                        });
+                    }
+                }
+            }
         }
 
-        console.log('Stock movements to be inserted:', stockMovements);
+        // Convert Map values to an array for insertion
+        const stockMovementsArray = Array.from(stockMovements.values());
+
+        console.log('Stock movements to be inserted:', stockMovementsArray);
 
         // Insert new stock movements into the database
-        if (stockMovements.length > 0) {
-            await StockMovement.insertMany(stockMovements);
+        if (stockMovementsArray.length > 0) {
+            await StockMovement.insertMany(stockMovementsArray);
             console.log('Stock movements saved to database for order', orderName);
             return res.json({ success: true });
         } else {
@@ -179,6 +191,7 @@ router.post('/process-order', async (req, res) => {
         return res.status(500).json({ success: false, message: 'Error processing order' });
     }
 });
+
 
 // Route to fetch available months for stock movements
 router.get('/list-months', async (req, res) => {
