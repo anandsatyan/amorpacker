@@ -50,18 +50,26 @@ router.get('/view-orders', async (req, res) => {
             existingStockMovementMap.set(movement.orderId, true);
         });
 
-        // Filter out orders that already have stock movements
-        const ordersWithoutStockMovement = orders.filter(order => !existingStockMovementMap.has(order.name));
+        // Filter fulfilled orders that do not already have stock movements
+        let fulfilledOrders = orders.filter(order => 
+            order.fulfillment_status === 'fulfilled' && !existingStockMovementMap.has(order.name)
+        );
 
-        // Generate HTML buttons for each order that does not have a stock movement yet
-        let buttonsHtml = ordersWithoutStockMovement.map(order => {
+        fulfilledOrders = fulfilledOrders.sort((a, b) => {
+            const orderA = parseInt(a.name.replace('#', ''));
+            const orderB = parseInt(b.name.replace('#', ''));
+            return orderA - orderB;
+        });
+
+        // Generate HTML buttons for each fulfilled order that does not have a stock movement yet
+        let buttonsHtml = fulfilledOrders.map(order => {
             return `<button id="${order.name}" onclick="handleClick('${order.name}')">${order.name}</button>`;
         }).join('');
 
         res.send(`
             <html>
                 <head>
-                    <title>Order List</title>
+                    <title>Orders yet to be reconciled</title>
                     <style>
                         body { font-family: sans-serif; }
                         button { padding: 10px; margin: 5px; }
@@ -91,7 +99,7 @@ router.get('/view-orders', async (req, res) => {
                     </script>
                 </head>
                 <body>
-                    <h1>Order List</h1>
+                    <h1>Order Yet to be Reconciled</h1>
                     <div id="orders">
                         ${buttonsHtml}
                     </div>
@@ -269,6 +277,14 @@ router.get('/view-stock-movements', async (req, res) => {
                             try {
                                 const response = await fetch('/inventory/stock-movements/' + month);
                                 const stockMovements = await response.json();
+
+                                // Sort stock movements by orderId (convert orderId to an integer)
+                                stockMovements.sort((a, b) => {
+                                    const orderA = parseInt(a.orderId.replace('#', ''));
+                                    const orderB = parseInt(b.orderId.replace('#', ''));
+                                    return orderA - orderB;
+                                });
+
                                 let tableRows = stockMovements.map(movement => 
                                     \`<tr>
                                         <td>\${movement.date}</td>
