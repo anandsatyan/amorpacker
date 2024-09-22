@@ -620,7 +620,7 @@ async function calculateComponentsForOrder(order) {
                         // Process each component
                         for (const componentGid of components) {
                             const componentId = componentGid.split("/").pop();
-
+                            await delay(500);
                             // Fetch the component product details
                             const componentProductResponse = await axios.get(
                                 `${SHOPIFY_API_URL}/products/${componentId}.json`,
