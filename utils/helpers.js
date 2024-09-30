@@ -92,17 +92,10 @@ async function fetchProductMetafieldsBySku(sku) {
 // Helper function to generate HTML for line items
 async function generateLineItemHtml(item) {
     try {
-        let packingListName = item.title;
+        let packingListName;
         let hsCode = 'N/A'; // Default value for HS code
         let additionalInfo = '';
-
-        // Initialize itemHtml here
-        let itemHtml = `
-          <div class="flex-line-item">
-            <div class="flex-line-item-description">
-              <p class="line-item-title"><input type="checkbox" />&nbsp;<strong>${packingListName}</strong></p>
-              ${hsCode !== 'N/A' ? `<p>HS Code: ${hsCode}</p>` : ''}
-        `;
+        let itemHtml = ''; // Initialize itemHtml early
 
         // Check if the item is from a draft order (i.e., custom item without product ID or SKU)
         if (!item.product_id && !item.sku) {
@@ -110,16 +103,21 @@ async function generateLineItemHtml(item) {
             if (hsCodeMatch) {
                 hsCode = hsCodeMatch[1];
             }
+            packingListName = item.title;  // Use title if it's a draft order
         } else {
+            // Fetch metafields for the main product (not just for components)
             const productMetafields = await fetchProductMetafields(item.product_id);
+
+            // Set the packing list name if it exists in the metafields
             packingListName = productMetafields.find(
                 (mf) => mf.namespace === 'custom' && mf.key === 'packing_list_name'
-            )?.value || item.title;
+            )?.value || item.title;  // Use packing list name or fallback to the default title
 
             if (item.properties && item.properties.length > 0) {
                 additionalInfo = item.properties.map((prop) => `${prop.value}`).join(', ');
             }
 
+            // Handle components for the main product
             const componentsMetafield = productMetafields.find(
                 (mf) => mf.namespace === 'custom' && mf.key === 'components'
             );
@@ -127,6 +125,7 @@ async function generateLineItemHtml(item) {
             if (componentsMetafield && componentsMetafield.value) {
                 const components = JSON.parse(componentsMetafield.value);
                 if (Array.isArray(components) && components.length > 0) {
+                    // Generate the component HTML before initializing itemHtml
                     const componentHtmlArray = await Promise.all(
                         components.map(async (componentGid) => {
                             const componentId = componentGid.split('/').pop();
@@ -149,24 +148,45 @@ async function generateLineItemHtml(item) {
                         })
                     );
 
-                    // Add component HTML to itemHtml
+                    // Add component HTML after the main product HTML
                     itemHtml += componentHtmlArray.join('');
+                    // Add "Sticker Labels" as an extra component
+                    itemHtml += `
+                        <div class="flex-line-item">
+                          <div class="flex-line-item-description" style="margin-left: 20px;">
+                            <span class="line-item-title"><input type="checkbox" />&nbsp;Sticker Labels</span>
+                          </div>
+                          <div class="flex-line-item-details">
+                            <span class="text-align-right" style="margin-right: 20px;">${item.quantity}</span>
+                          </div>
+                        </div>`;
                 }
             }
         }
 
+        // Initialize the main product's HTML after fetching the packing list name
+        let mainProductHtml = `
+          <div class="flex-line-item">
+            <div class="flex-line-item-description">
+              <p class="line-item-title"><input type="checkbox" />&nbsp;<strong>${packingListName}</strong></p>
+              ${hsCode !== 'N/A' ? `<p>HS Code: ${hsCode}</p>` : ''}
+        `;
+
         if (item.sku) {
-            itemHtml += `<p class="line-item-sku">SKU: ${item.sku}</p>`;
+            mainProductHtml += `<p class="line-item-sku">SKU: ${item.sku}</p>`;
         }
 
-        itemHtml += `
+        mainProductHtml += `
             </div>
             <div class="flex-line-item-details">
               <p class="text-align-right"><strong>${item.quantity}</strong></p>
             </div>
           </div>`;
 
-        // Check and add components if the item is a sample
+        // Add the main product HTML first, then append the component HTML
+        itemHtml = mainProductHtml + itemHtml;
+
+        // Optionally, check and add additional components (if applicable for sample items)
         const componentsHtml = await addComponentsForSampleItem(item, additionalInfo);
         itemHtml += componentsHtml;
 
@@ -176,6 +196,8 @@ async function generateLineItemHtml(item) {
         throw error;
     }
 }
+
+
 
 
 // Function to check if the line item is a sample and add components if it has them
