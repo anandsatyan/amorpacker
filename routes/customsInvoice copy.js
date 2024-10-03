@@ -162,12 +162,11 @@ router.get('/:orderId', async (req, res) => {
                       </div>
                       <div class="address-column">
                           <strong>Bill To:</strong><br /><br />
-                          Brandsamor Commerce L.L.C-FZ<br />
-                          The Meydan Hotel, Grandstand, 6th floor,<br />
-                          Meydan Road, Nad Al Sheba,<br />
-                          Dubai, U.A.E<br /><br />
-                          Phone: +971 52 154 3617<br />
-                          Email: info@packamor.com
+                          Packamor, LLC<br />
+                          1111B, South Governors Avenue,<br />
+                          STE 23374, Dover, DE 19904, <br />
+                          United States of America <br />
+                          info@packamor.com | +18482201353
                           <br /><br /><br />
                           Gross Weight: <input type="text" name="grossWeight" /> kg <br />
                           Net Weight: <input type="text" name="netWeight" /> kg <br />
