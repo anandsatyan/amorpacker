@@ -262,11 +262,11 @@ router.post('/create-invoice/:orderId', async (req, res) => {
               <tr>
                   <td>
                       <strong>Bill To:</strong><br>
-                      Brandsamor Commerce L.L.C-FZ<br>
-                      The Meydan Hotel, Grandstand, 6th floor,<br>
-                      Meydan Road, Nad Al Sheba,<br>
-                      Dubai, U.A.E<br>
-                      info@packamor.com | +971 52 154 3617
+                          Packamor, LLC<br />
+                          1111B, South Governors Avenue,<br />
+                          STE 23374, Dover, DE 19904, <br />
+                          United States of America <br />
+                          info@packamor.com | +18482201353
                   </td>
                   <td>
                       <strong>Ship To:</strong><br>

@@ -402,11 +402,11 @@ app.get('/generate-customs-invoice/:orderId', async (req, res) => {
                       </div>
                       <div class="address-column">
                           <strong>Bill To:</strong><br /><br />
-                          Brandsamor Commerce L.L.C-FZ<br />
-                          The Meydan Hotel, Grandstand, 6th floor,<br />
-                          Meydan Road, Nad Al Sheba,<br />
-                          Dubai, U.A.E<br /><br />
-                          Phone: +971 52 154 3617<br />
+                          Packamor, LLC<br />
+                          1111B, South Governors Avenue,<br />
+                          STE 23374, Dover, DE 19904, <br />
+                          United States of America <br />
+                          Phone: +18482201353<br />
                           Email: info@packamor.com
                           <br /><br /><br />
                           Gross Weight: <input type="text" /> kg <br />
