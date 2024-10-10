@@ -604,7 +604,7 @@ router.get('/all', async (req, res) => {
                     <td style="padding: 8px; border-bottom: 1px solid #ddd;">${destination}</td>
                     <td style="padding: 8px; border-bottom: 1px solid #ddd;">$${order.total_price}</td>
                     <td style="padding: 8px; border-bottom: 1px solid #ddd;">
-                        <a href="/packing-slip/${order.id}">Slip</a>
+                        <a href="/packing-slips/${order.id}">Slip</a>
                     </td>
                     <td style="padding: 8px; border-bottom: 1px solid #ddd;">
                         <button class="create-invoice-button" data-order-id="${order.id}">Create</button>
