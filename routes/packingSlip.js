@@ -188,7 +188,7 @@ router.post('/:orderId/upload', upload.single('pdfFile'), (req, res) => {
 
   if (req.file) {
     // Redirect to the GET route that shows the packing slip
-    return res.redirect(`/generate-packing-slip/${orderId}?success=true`);
+    return res.redirect(`/packing-slips/${orderId}?success=true`);
   }
 
   // If no file is uploaded, return an error message
@@ -199,7 +199,7 @@ router.post('/:orderId/upload', upload.single('pdfFile'), (req, res) => {
 router.get('/:orderId/upload-pdf', (req, res) => {
   const orderId = req.params.orderId;
   res.send(`
-    <form action="/generate-packing-slip/${orderId}/upload" method="post" enctype="multipart/form-data">
+    <form action="/packing-slips/${orderId}/upload" method="post" enctype="multipart/form-data">
       <h3>Upload PDF Design:</h3>
       <input type="file" name="pdfFile" accept="application/pdf" required />
       <button type="submit">Upload PDF</button>

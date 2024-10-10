@@ -33,6 +33,7 @@ const packingSlipRoute = require('./routes/packingSlip');
 const customsInvoiceRoute = require('./routes/customsInvoice');
 const createFedexShipment = require('./routes/createFedexShipment'); // Adjust the path if necessary
 const inventoryRoute = require('./routes/inventory');
+const designRoute = require('./routes/design');
 
 // Import middleware
 const basicAuthMiddleware = require('./middleware/basicAuth');
@@ -51,6 +52,9 @@ app.use('/orders', ordersRoute);
 
 // CSBV route
 app.use('/csbv', csbvRoute);
+
+// Design route
+app.use('/design', designRoute);
 
 // Inventory Route
 app.use('/inventory', inventoryRoute);

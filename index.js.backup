@@ -94,7 +94,7 @@ app.get('/orders', async (req, res) => {
             <td style="padding: 8px; border-bottom: 1px solid #ddd;">${tags}</td>
             <td style="padding: 8px; border-bottom: 1px solid #ddd;">${destination}</td>
             <td style="padding: 8px; border-bottom: 1px solid #ddd;">$${order.total_price}</td>
-            <td style="padding: 8px; border-bottom: 1px solid #ddd;"><a href="/generate-packing-slip/${order.id}">Packing Slip</a></td>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd;"><a href="/packing-slips/${order.id}">Packing Slip</a></td>
             <td style="padding: 8px; border-bottom: 1px solid #ddd;"><a href="/generate-customs-invoice/${order.id}" target="_blank">Export Invoice</a></td> <!-- New link -->
           </tr>
         `;
@@ -198,7 +198,7 @@ async function generateLineItemHtml(item) {
 }
 
 // Generate packing slip
-app.get('/generate-packing-slip/:orderId', async (req, res) => {
+app.get('/packing-slips/:orderId', async (req, res) => {
   const orderId = req.params.orderId;
 
   try {
