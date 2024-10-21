@@ -36,6 +36,7 @@ const createFedexShipment = require('./routes/createFedexShipment'); // Adjust t
 const inventoryRoute = require('./routes/inventory');
 const designRoute = require('./routes/design');
 const flexportRoute = require('./routes/flexport');
+const apiRoute = require('./routes/api');
 
 // Import middleware
 const basicAuthMiddleware = require('./middleware/basicAuth');
@@ -63,6 +64,9 @@ app.use('/design', designRoute);
 
 // Inventory Route
 app.use('/inventory', inventoryRoute);
+
+// API Route
+app.use('/api', apiRoute);
 
 
 // Packing slip route
