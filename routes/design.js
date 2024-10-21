@@ -221,7 +221,7 @@ router.get('/orders/:orderId', async (req, res) => {
         </div>
 
         <label for="material">Material</label>
-        <input type="text" id="material" name="material" value="Synthetic Vinyl" readonly>
+        <input type="text" id="material" name="material" value="Synthetic Vinyl" >
 
         <label for="lamination">Lamination</label>
         <select id="lamination" name="lamination">
@@ -230,7 +230,7 @@ router.get('/orders/:orderId', async (req, res) => {
         </select>
 
         <label for="qty">Qty</label>
-        <input type="number" id="qty" name="qty" value="100" min="1" readonly>
+        <input type="number" id="qty" name="qty" value="100" min="1">
 
         <label for="artworkLink">Artwork Link</label>
         <textarea id="artworkLink" name="artworkLink" rows="4" placeholder="Paste artwork links here"></textarea>
@@ -239,19 +239,19 @@ router.get('/orders/:orderId', async (req, res) => {
     <!-- Boxes Form -->
     <div id="boxesForm" class="hidden">
         <label for="dieNo">Die No.</label>
-        <input type="text" id="dieNo" name="dieNo" value="New Die" readonly>
+        <input type="text" id="dieNo" name="dieNo" value="New Die" >
 
         <label for="print">Print</label>
-        <input type="text" id="print" name="print" value="4 color print" readonly>
+        <input type="text" id="print" name="print" value="4 color print" >
 
         <label for="materialBox">Material</label>
-        <input type="text" id="materialBox" name="materialBox" value="350 GSM CYBER XL" readonly>
+        <input type="text" id="materialBox" name="materialBox" value="350 GSM CYBER XL" >
 
         <label for="laminationBox">Lamination</label>
-        <input type="text" id="laminationBox" name="laminationBox" value="Outside Thermal Lamination" readonly>
+        <input type="text" id="laminationBox" name="laminationBox" value="Outside Thermal Lamination" >
 
         <label for="qtyBox">Qty</label>
-        <input type="number" id="qtyBox" name="qtyBox" value="225" min="1" readonly>
+        <input type="number" id="qtyBox" name="qtyBox" value="225" min="1" >
 
         <label for="artworkLinkBox">Artwork Link</label>
         <textarea id="artworkLinkBox" name="artworkLinkBox" rows="4" placeholder="Paste artwork links here"></textarea>
