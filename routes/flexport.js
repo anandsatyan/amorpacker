@@ -1,21 +1,14 @@
 const express = require('express');
-const axios = require('axios');
 const router = express.Router();
-require('dotenv').config(); // Ensure this is used to load environment variables
+const axios = require('axios');
+require('dotenv').config();
+// Replace this URL with the correct Flexport API endpoint
+const flexportApiUrl = 'https://api.flexport.com/products'; 
 
-const app = express();
-
-// Middleware to parse JSON request bodies
-app.use(express.json());
-
-// Flexport API endpoint
-const flexportApiUrl = 'https://api.flexport.com/products';
-
-// Route to create the product
-router.get('/create-product', async (req, res) => {
-console.log(`Using API token: ${process.env.FLEXPORT_API_TOKEN}`);
+router.post('/create-product', async (req, res) => {
+  console.log(`Using API token: ${process.env.FLEXPORT_API_TOKEN}`);
   try {
-    // Product data (could also be passed from req.body)
+    // Product data - you can modify this payload as necessary or pass it from req.body
     const payload = {
       product_code: 'VIC50ML-1234',
       name: 'Victor 50ml Bottles',
@@ -39,35 +32,36 @@ console.log(`Using API token: ${process.env.FLEXPORT_API_TOKEN}`);
       packaging_type: 'box'
     };
 
-    // Get the API key from the environment variable
+    // Get the API token from the environment variable
     const apiKey = process.env.FLEXPORT_API_TOKEN;
 
     if (!apiKey) {
-      return res.status(500).json({ message: 'API key not found' });
+      return res.status(500).json({ message: 'API token not found' });
     }
 
-    // Make the API call to Flexport
+    // Make the POST request to Flexport API
     const response = await axios.post(flexportApiUrl, payload, {
       headers: {
         'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Flexport-Version': '1' // Include the correct version if necessary
       }
     });
 
-    // Send a success response back to the client
+    // Return a success response
     res.status(200).json({
       message: 'Product created successfully',
       data: response.data
     });
 
   } catch (error) {
-    // Handle errors and send an error response back to the client
+    // Log and return the error if the API call fails
+    console.error('Error creating product:', error.response ? error.response.data : error.message);
     res.status(500).json({
       message: 'Error creating product',
       error: error.response ? error.response.data : error.message
     });
   }
 });
-
 
 module.exports = router;

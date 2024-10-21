@@ -9,6 +9,7 @@ const mongoose = require('mongoose');
 
 // Middleware to parse JSON body
 app.use(express.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
 // MongoDB connection
