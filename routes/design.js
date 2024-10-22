@@ -282,6 +282,10 @@ router.get('/orders/:orderId', async (req, res) => {
                 <label for="qty">Qty</label>
                 <input type="number" id="qty" name="qty" value="100" min="1">
 
+                <label for="comments">Comments</label>
+                <textarea id="comments" name="comments" rows="4" placeholder="Equally divided among variants"></textarea>
+
+
                 <label for="artworkLink">Artwork Link</label>
                 <textarea id="artworkLink" name="artworkLink" rows="4" placeholder="Paste artwork links here"></textarea>
             </div>
@@ -302,6 +306,10 @@ router.get('/orders/:orderId', async (req, res) => {
 
                 <label for="qtyBox">Qty</label>
                 <input type="number" id="qtyBox" name="qtyBox" value="225" min="1">
+
+                <label for="commentsBox">Comments</label>
+                <textarea id="commentsBox" name="commentsBox" rows="4" placeholder="Add any comments"></textarea>
+
 
                 <label for="artworkLinkBox">Artwork Link</label>
                 <textarea id="artworkLinkBox" name="artworkLinkBox" rows="4" placeholder="Paste artwork links here"></textarea>
@@ -401,7 +409,7 @@ router.get('/orders/:orderId', async (req, res) => {
 // Route to send email based on form data
 router.post('/orders/:orderId/send-email', async (req, res) => {
     const { orderId } = req.params;
-    const { jobType, size, customSize, lamination, artworkLink, jobName, dieNo, print, materialBox, laminationBox, qtyBox } = req.body;
+    const { jobType, size, customSize, lamination, artworkLink, jobName, dieNo, print, materialBox, laminationBox, qtyBox, comments, commentsBox } = req.body;
 
     try {
         // Fetch the order details from Shopify
@@ -428,6 +436,7 @@ router.post('/orders/:orderId/send-email', async (req, res) => {
                 <p><strong>Material:</strong> Synthetic Vinyl</p>
                 <p><strong>Lamination:</strong> ${lamination}</p>
                 <p><strong>Qty:</strong> 100</p>
+                <p><strong>Comments:</strong> ${comments}
                 <p><strong>Artwork Link:</strong> <a href="${artworkLink}" target="_blank">${artworkLink}</a></p>
             `;
         } else if (jobType === 'boxes') {
@@ -440,6 +449,8 @@ router.post('/orders/:orderId/send-email', async (req, res) => {
                 <p><strong>Material:</strong> ${materialBox}</p>
                 <p><strong>Lamination:</strong> ${laminationBox}</p>
                 <p><strong>Qty:</strong> ${qtyBox}</p>
+                <p><strong>Comments:</strong> ${commentsBox}
+                <p><strong>Artwork Link:</strong> <a href="${artworkLinkBox}" target="_blank">${artworkLinkBox}</a></p>
             `;
         }
 
@@ -457,7 +468,8 @@ router.post('/orders/:orderId/send-email', async (req, res) => {
         // Email options
         const mailOptions = {
             from: 'info@packamor.com',
-            to: 'anand@packamor.com',
+            to: 'info@packamor.com',
+            cc: ['ajit@pioprinters.com', 'info@piopackaging.com'], 
             subject: subject,
             html: htmlContent
         };
