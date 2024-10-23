@@ -37,6 +37,7 @@ const inventoryRoute = require('./routes/inventory');
 const designRoute = require('./routes/design');
 const flexportRoute = require('./routes/flexport');
 const apiRoute = require('./routes/api');
+const courierRoute = require('./routes/courier');
 
 // Import middleware
 const basicAuthMiddleware = require('./middleware/basicAuth');
@@ -55,6 +56,9 @@ app.use('/orders', ordersRoute);
 
 //Flexport route
 app.use('/flexport', flexportRoute);
+
+//Courier route
+app.use('/courier', courierRoute);
 
 // CSBV route
 app.use('/csbv', csbvRoute);
