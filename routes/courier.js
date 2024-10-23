@@ -144,7 +144,7 @@ router.get('/picker', async (req, res) => {
                         ${countryOptions}
                     </select>
                     <label for="weight">Weight (kg):</label>
-                    <input type="number" id="weight" step="0.5" min="0.5">
+                    <input type="number" id="weight" step="0.5" min="0.5" value="10.0">
                     <button onclick="findCourier()">Find Courier</button>
                     <div id="bestCourier"></div>
                     <div id="results"></div>
