@@ -26,7 +26,7 @@ router.get('/orders', async (req, res) => {
         // Filter orders with either "Full Packaging" or "Boxes" tags
         const filteredOrders = orders.filter(order => {
             const tags = order.tags ? order.tags.split(',').map(tag => tag.trim()) : [];
-            return tags.includes('Full Packaging') || tags.includes('Boxes');
+            return tags.includes('Design Job') || tags.includes('Boxes');
         });
 
         // Fetch the status from your Orders model for each order
@@ -59,7 +59,7 @@ router.get('/orders', async (req, res) => {
         </style>
 
         <div class="header-container">
-            <h1>Full Packaging or Boxes Orders</h1>
+            <h1>Design Orders</h1>
         </div>
         <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
             <thead>
