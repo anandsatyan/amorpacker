@@ -88,45 +88,60 @@ router.get('/picker', async (req, res) => {
                 </style>
                 <script>
                     function findCourier() {
-                        const country = document.getElementById('country').value;
-                        const weight = document.getElementById('weight').value;
-                        
-                        fetch('/courier/findCourier', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ country, weight })
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            const rates = {
-                                "FedEx Account 1": calculateFinalPrice(data.fedexAccount1),
-                                "FedEx Account 2": calculateFinalPrice(data.fedexAccount2),
-                                "Aramex": calculateFinalPrice(data.aramex)
-                            };
+    const country = document.getElementById('country').value;
+    const weight = document.getElementById('weight').value;
 
-                            // Determine the cheapest courier
-                            let cheapestCourier = "No Service";
-                            let minPrice = Infinity;
-                            for (let courier in rates) {
-                                if (rates[courier] !== "No Service" && rates[courier] < minPrice) {
-                                    minPrice = rates[courier];
-                                    cheapestCourier = courier;
-                                }
-                            }
+    fetch('/courier/findCourier', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ country, weight })
+    })
+    .then(response => response.json())
+    .then(data => {
+        const rates = {
+            "FedEx Account 1": calculateFinalPrice(data.fedexAccount1),
+            "FedEx Account 2": calculateFinalPrice(data.fedexAccount2),
+            "Aramex": calculateFinalPrice(data.aramex)
+        };
 
-                            // Build the result HTML
-                            let resultHtml = '<h3>Rates</h3>';
-                            resultHtml += '<table><tr><th>Courier</th><th>Original Rate</th><th>Final Price (₹)</th></tr>';
-                            resultHtml += '<tr><td>FedEx Account 1</td><td>' + (data.fedexAccount1 || 'No Service') + '</td><td>' + (rates["FedEx Account 1"] !== "No Service" ? '₹' + rates["FedEx Account 1"].toFixed(2) : 'No Service') + '</td></tr>';
-                            resultHtml += '<tr><td>FedEx Account 2</td><td>' + (data.fedexAccount2 || 'No Service') + '</td><td>' + (rates["FedEx Account 2"] !== "No Service" ? '₹' + rates["FedEx Account 2"].toFixed(2) : 'No Service') + '</td></tr>';
-                            resultHtml += '<tr><td>Aramex</td><td>' + (data.aramex || 'No Service') + '</td><td>' + (rates["Aramex"] !== "No Service" ? '₹' + rates["Aramex"].toFixed(2) : 'No Service') + '</td></tr>';
-                            resultHtml += '</table>';
+        // Determine the cheapest courier
+        let cheapestCourier = "No Service";
+        let minPrice = Infinity;
+        for (let courier in rates) {
+            if (rates[courier] !== "No Service" && rates[courier] < minPrice) {
+                minPrice = rates[courier];
+                cheapestCourier = courier;
+            }
+        }
 
-                            document.getElementById('results').innerHTML = resultHtml;
-                            document.getElementById('bestCourier').innerText = 'Pick: ' + cheapestCourier;
-                        })
-                        .catch(error => console.error('Error:', error));
-                    }
+        // Fetch Benchmark Price for the US
+        fetch('/courier/getBenchmarkPrice', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ weight })
+        })
+        .then(response => response.json())
+        .then(benchmarkData => {
+            // Build the result HTML
+            let resultHtml = '<h3>Rates</h3>';
+            resultHtml += '<table><tr><th>Courier</th><th>Original Rate</th><th>Final Price (₹)</th></tr>';
+            resultHtml += '<tr><td>FedEx Account 1</td><td>' + (data.fedexAccount1 || 'No Service') + '</td><td>' + (rates["FedEx Account 1"] !== "No Service" ? '₹' + rates["FedEx Account 1"].toFixed(2) : 'No Service') + '</td></tr>';
+            resultHtml += '<tr><td>FedEx Account 2</td><td>' + (data.fedexAccount2 || 'No Service') + '</td><td>' + (rates["FedEx Account 2"] !== "No Service" ? '₹' + rates["FedEx Account 2"].toFixed(2) : 'No Service') + '</td></tr>';
+            resultHtml += '<tr><td>Aramex</td><td>' + (data.aramex || 'No Service') + '</td><td>' + (rates["Aramex"] !== "No Service" ? '₹' + rates["Aramex"].toFixed(2) : 'No Service') + '</td></tr>';
+            resultHtml += '</table>';
+
+            // Include the benchmark price
+            const benchmarkPrice = benchmarkData.benchmarkPrice !== "No Service" ? '₹' + benchmarkData.benchmarkPrice.toFixed(2) : 'No Service';
+            resultHtml += '<br /><br /><div id="benchmarkPrice"><strong>Benchmark Original Price (US): </strong>' + benchmarkPrice + '</div>';
+
+            document.getElementById('results').innerHTML = resultHtml;
+            document.getElementById('bestCourier').innerText = 'Pick: ' + cheapestCourier;
+        })
+        .catch(error => console.error('Error fetching Benchmark Price:', error));
+    })
+    .catch(error => console.error('Error:', error));
+}
+
 
                     function calculateFinalPrice(rate) {
                         if (rate === "No Service") return "No Service";
@@ -216,5 +231,42 @@ function getRateByWeight(rates, weight) {
     const rate = rates.find(rate => rate.weight === roundedWeight);
     return rate ? rate.rate : 'No Service';
 }
+
+// Route to get the US Benchmark Price
+router.post('/getBenchmarkPrice', async (req, res) => {
+    const { weight } = req.body;
+    if (!weight) {
+        return res.status(400).json({ error: 'Weight is required' });
+    }
+
+    try {
+        const couriers = ['FedEx Account 1', 'FedEx Account 2', 'Aramex'];
+        let minPrice = Infinity;
+
+        for (const courier of couriers) {
+            const benchmarkZone = await CountryZoneMapping.findOne({ courier, country: 'USA' });
+
+            if (benchmarkZone) {
+                const benchmarkRates = await CourierRates.findOne({ courier, zone: benchmarkZone.zone });
+                const rate = benchmarkRates ? getRateByWeight(benchmarkRates.rates, weight) : null;
+
+                // Check if the rate is available and update minPrice if it's the lowest
+                if (rate !== null && rate !== 'No Service' && rate < minPrice) {
+                    minPrice = rate;
+                }
+            }
+        }
+
+        // If no valid rate found, return 'No Service'
+        const benchmarkPrice = minPrice === Infinity ? 'No Service' : minPrice;
+
+        res.json({ benchmarkPrice });
+    } catch (error) {
+        console.error('Error fetching benchmark price:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+
 
 module.exports = router;
