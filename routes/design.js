@@ -409,7 +409,7 @@ router.get('/orders/:orderId', async (req, res) => {
 // Route to send email based on form data
 router.post('/orders/:orderId/send-email', async (req, res) => {
     const { orderId } = req.params;
-    const { jobType, size, customSize, lamination, artworkLink, jobName, dieNo, print, materialBox, laminationBox, qtyBox, comments, commentsBox } = req.body;
+    const { jobType, size, customSize, lamination, artworkLink, artworkLinkBox, jobName, dieNo, print, materialBox, laminationBox, qtyBox, comments, commentsBox } = req.body;
 
     try {
         // Fetch the order details from Shopify
