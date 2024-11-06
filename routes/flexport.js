@@ -6,8 +6,8 @@ const axios = require('axios');
 // Environment variables
 const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET;
 const FLEXPORT_API_TOKEN = process.env.FLEXPORT_API_TOKEN;
-const AUTH_USER = process.env.AUTH_USER; // Basic Auth Username
-const AUTH_PASS = process.env.AUTH_PASS; // Basic Auth Password
+const BASIC_AUTH_USERNAME = process.env.AUTH_USER; // Basic Auth Username
+const BASIC_AUTH_PASSWORD = process.env.AUTH_PASS; // Basic Auth Password
 
 // Axios instance for Flexport API
 const flexportAPI = axios.create({
@@ -21,8 +21,8 @@ const flexportAPI = axios.create({
 
 // Middleware for Basic Authentication
 const basicAuth = (req, res, next) => {
-  console.log('Expected AUTH_USER:', process.env.AUTH_USER);
-  console.log('Expected AUTH_PASS:', process.env.AUTH_PASS);
+  console.log('Expected BASIC_AUTH_USERNAME:', process.env.BASIC_AUTH_USERNAME);
+  console.log('Expected BASIC_AUTH_PASSWORD:', process.env.BASIC_AUTH_PASSWORD);
 
   const authHeader = req.headers.authorization || '';
   console.log('Authorization header received:', authHeader);
@@ -35,7 +35,7 @@ const basicAuth = (req, res, next) => {
   const [username, password] = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
   console.log('Decoded credentials:', { username, password });
 
-  if (username === process.env.AUTH_USER && password === process.env.AUTH_PASS) {
+  if (username === process.env.BASIC_AUTH_USERNAME && password === process.env.BASIC_AUTH_PASSWORD) {
     console.log('Basic Auth successful');
     return next();
   } else {
