@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const axios = require('axios');
-const SKUMap = require('../models/SKUMap'); // Import the SKUMap model
+const SKUMap = require('../models/SKUMap');
+const { SHOPIFY_API_URL, ACCESS_TOKEN } = require('../shopifyConfig');
 
 // Environment variables
 const FLEXPORT_API_TOKEN = process.env.FLEXPORT_API_TOKEN;
@@ -10,7 +11,7 @@ const SHOPIFY_WEBHOOK_SECRET = process.env.SHOPIFY_WEBHOOK_SECRET;
 const BASIC_AUTH_USERNAME = process.env.BASIC_AUTH_USERNAME;
 const BASIC_AUTH_PASSWORD = process.env.BASIC_AUTH_PASSWORD;
 
-// Axios instance for Flexport API
+// Axios instances for APIs
 const flexportAPI = axios.create({
   baseURL: 'https://logistics-api.flexport.com/logistics/api/2024-07',
   headers: {
@@ -20,117 +21,150 @@ const flexportAPI = axios.create({
   },
 });
 
+const shopifyAPI = axios.create({
+  baseURL: SHOPIFY_API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+    'X-Shopify-Access-Token': ACCESS_TOKEN,
+  },
+});
+
 // Middleware for Basic Authentication
 const basicAuth = (req, res, next) => {
   const authHeader = req.headers.authorization || '';
   if (!authHeader.startsWith('Basic ')) {
-    console.error('Authorization header missing or malformed');
     return res.status(401).send('Unauthorized');
   }
 
   const [username, password] = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
   if (username === BASIC_AUTH_USERNAME && password === BASIC_AUTH_PASSWORD) {
-    console.log('Basic Auth successful');
     return next();
   } else {
-    console.error('Basic Auth failed');
     return res.status(401).send('Unauthorized');
   }
 };
 
-// Middleware to verify Shopify webhook signature (only for POST requests)
-function verifyShopifyRequest(req, res, buf) {
-  const hmacHeader = req.get('X-Shopify-Hmac-Sha256');
-  const generatedHash = crypto
-    .createHmac('sha256', SHOPIFY_WEBHOOK_SECRET)
-    .update(buf, 'utf8', 'hex')
-    .digest('base64');
+// List unfulfilled Shopify orders in a beautified HTML table
+router.get('/unfulfilled-orders', basicAuth, async (req, res) => {
+  try {
+    const response = await shopifyAPI.get('/orders.json?fulfillment_status=unfulfilled');
+    const unfulfilledOrders = response.data.orders;
 
-  if (generatedHash !== hmacHeader) {
-    console.error('Shopify HMAC verification failed');
-    throw new Error('Request verification failed');
+    // Render orders in a formatted HTML table
+    res.send(`
+      <html>
+        <head>
+          <title>Unfulfilled Orders</title>
+          <style>
+            body { font-family: Arial, sans-serif; }
+            h1 { color: #333; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+            th { background-color: #f2f2f2; }
+            tr:hover { background-color: #f9f9f9; }
+            .view-link { color: #007bff; text-decoration: none; }
+            .view-link:hover { text-decoration: underline; }
+          </style>
+        </head>
+        <body>
+          <h1>Unfulfilled Orders</h1>
+          <table>
+            <thead>
+              <tr>
+                <th>Customer Name</th>
+                <th>Order Number</th>
+                <th>Order Value</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${unfulfilledOrders.map(order => `
+                <tr>
+                  <td>${order.customer ? `${order.customer.first_name} ${order.customer.last_name}` : 'Guest'}</td>
+                  <td>${order.name}</td>
+                  <td>$${parseFloat(order.total_price).toFixed(2)}</td>
+                  <td><a href="/flexport/order/${order.id}" class="view-link">View Line Items</a></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `);
+  } catch (error) {
+    console.error('Error fetching unfulfilled orders:', error);
+    res.status(500).send('Error fetching unfulfilled orders');
   }
-}
-
-// Test GET endpoint to verify Basic Auth without HMAC
-router.get('/webhook', basicAuth, (req, res) => {
-  console.log("GET webhook endpoint hit - Basic Auth successful");
-  res.status(200).send('GET request successful');
 });
 
-// Webhook endpoint for handling Shopify orders with Basic Auth and Shopify HMAC verification
-router.post('/webhook', basicAuth, express.json({ verify: verifyShopifyRequest }), async (req, res) => {
-  console.log("POST Webhook endpoint hit");
+// Step 2: Display line items for a specific order with checkboxes
+router.get('/order/:orderId', basicAuth, async (req, res) => {
+  const { orderId } = req.params;
   try {
-    const order = req.body;
-    console.log('Received order data:', JSON.stringify(order, null, 2));
-    await processOrder(order);
-    res.status(200).send('Webhook processed successfully');
+    const response = await shopifyAPI.get(`/orders/${orderId}.json`);
+    const order = response.data.order;
+
+    res.send(`
+      <html>
+        <head>
+          <title>Order Line Items</title>
+          <style>
+            body { font-family: Arial, sans-serif; }
+            h2 { color: #333; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+            th { background-color: #f2f2f2; }
+            tr:hover { background-color: #f9f9f9; }
+            .action-button { background-color: #007bff; color: #fff; border: none; padding: 10px 20px; cursor: pointer; }
+            .action-button:hover { background-color: #0056b3; }
+          </style>
+        </head>
+        <body>
+          <h2>Order ID: ${orderId} - ${order.name}</h2>
+          <form id="flexportForm" action="/flexport/fulfill-items" method="POST">
+            <table>
+              <thead>
+                <tr>
+                  <th>Select</th>
+                  <th>Product</th>
+                  <th>SKU</th>
+                  <th>Quantity</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${order.line_items.map(item => `
+                  <tr>
+                    <td><input type="checkbox" name="lineItems" value="${item.sku}|${item.quantity}"></td>
+                    <td>${item.title}</td>
+                    <td>${item.sku}</td>
+                    <td>${item.quantity}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            <input type="hidden" name="orderId" value="${orderId}">
+            <button type="submit" class="action-button">Flexport Selected</button>
+          </form>
+          <script>
+            document.getElementById('flexportForm').onsubmit = async (event) => {
+              event.preventDefault();
+              const formData = new FormData(event.target);
+              const response = await fetch('/flexport/fulfill-items', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(Object.fromEntries(formData))
+              });
+              const result = await response.json();
+              alert(result.message);
+            };
+          </script>
+        </body>
+      </html>
+    `);
   } catch (error) {
-    console.error('Error processing webhook:', error);
-    res.status(500).send('Error processing webhook');
+    console.error('Error fetching order details:', error);
+    res.status(500).send('Error fetching order details');
   }
 });
-
-// Function to process Shopify order items and map to Flexport orders
-async function processOrder(order) {
-  const lineItems = order.line_items;
-
-  for (const item of lineItems) {
-    // Find SKU mappings for the Shopify SKU in MongoDB
-    const skuMap = await SKUMap.findOne({ shopifySKU: item.sku });
-
-    if (skuMap) {
-      console.log(`Processing components for Shopify SKU ${item.sku}`);
-      
-      // Process each component associated with the Shopify SKU
-      for (const component of skuMap.components) {
-        const flexportSKU = component.flexportSKU;
-        const quantity = item.quantity * component.quantity; // Adjust quantity based on order
-        await createFlexportOrder(flexportSKU, quantity, order, item.sku);
-      }
-    } else {
-      console.warn(`No SKU mapping found for Shopify SKU ${item.sku}`);
-    }
-  }
-}
-
-// Function to create an order in Flexport for each component
-async function createFlexportOrder(flexportSKU, quantity, order, shopifySKU) {
-  try {
-    const payload = {
-      data: {
-        type: 'order',
-        attributes: {
-          order_number: `Shopify-${order.id}-${flexportSKU}`, // Unique order number
-          destination_address: {
-            name: order.shipping_address.name,
-            company: order.shipping_address.company,
-            street1: order.shipping_address.address1,
-            street2: order.shipping_address.address2,
-            city: order.shipping_address.city,
-            state: order.shipping_address.province,
-            postal_code: order.shipping_address.zip,
-            country: order.shipping_address.country_code,
-            phone_number: order.shipping_address.phone,
-            email: order.email,
-          },
-          order_lines: [
-            {
-              product_sku: flexportSKU,
-              quantity: quantity,
-            },
-          ],
-        },
-      },
-    };
-
-    console.log(`Creating Flexport order for SKU ${flexportSKU} with payload:`, JSON.stringify(payload, null, 2));
-    const response = await flexportAPI.post('/orders', payload);
-    console.log(`Flexport order created successfully for Shopify SKU ${shopifySKU} component ${flexportSKU}:`, response.data);
-  } catch (error) {
-    console.error(`Error creating Flexport order for component ${flexportSKU}:`, error.response?.data || error.message);
-  }
-}
 
 module.exports = router;
