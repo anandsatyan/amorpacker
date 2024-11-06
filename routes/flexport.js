@@ -21,8 +21,11 @@ const flexportAPI = axios.create({
 
 // Middleware for Basic Authentication
 const basicAuth = (req, res, next) => {
+  console.log('Expected AUTH_USER:', process.env.AUTH_USER);
+  console.log('Expected AUTH_PASS:', process.env.AUTH_PASS);
+
   const authHeader = req.headers.authorization || '';
-  console.log('Authorization header:', authHeader);
+  console.log('Authorization header received:', authHeader);
 
   if (!authHeader.startsWith('Basic ')) {
     console.error('Authorization header missing or malformed');
@@ -32,7 +35,7 @@ const basicAuth = (req, res, next) => {
   const [username, password] = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
   console.log('Decoded credentials:', { username, password });
 
-  if (username === AUTH_USER && password === AUTH_PASS) {
+  if (username === process.env.AUTH_USER && password === process.env.AUTH_PASS) {
     console.log('Basic Auth successful');
     return next();
   } else {
@@ -40,6 +43,7 @@ const basicAuth = (req, res, next) => {
     return res.status(401).send('Unauthorized');
   }
 };
+
 
 // Middleware to verify Shopify webhook signature (only for POST requests)
 function verifyShopifyRequest(req, res, buf) {
