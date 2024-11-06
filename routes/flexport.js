@@ -4,10 +4,7 @@ const crypto = require('crypto');
 const axios = require('axios');
 
 // Environment variables
-const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET;
 const FLEXPORT_API_TOKEN = process.env.FLEXPORT_API_TOKEN;
-const BASIC_AUTH_USERNAME = process.env.AUTH_USER; // Basic Auth Username
-const BASIC_AUTH_PASSWORD = process.env.AUTH_PASS; // Basic Auth Password
 
 // Axios instance for Flexport API
 const flexportAPI = axios.create({
@@ -48,8 +45,10 @@ const basicAuth = (req, res, next) => {
 // Middleware to verify Shopify webhook signature (only for POST requests)
 function verifyShopifyRequest(req, res, buf) {
   const hmacHeader = req.get('X-Shopify-Hmac-Sha256');
+  const webhookSecret = process.env.SHOPIFY_WEBHOOK_SECRET;
+
   const generatedHash = crypto
-    .createHmac('sha256', SHOPIFY_API_SECRET)
+    .createHmac('sha256', webhookSecret)
     .update(buf, 'utf8', 'hex')
     .digest('base64');
 
