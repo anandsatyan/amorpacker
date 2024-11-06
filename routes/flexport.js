@@ -48,9 +48,20 @@ function verifyShopifyRequest(req, res, buf) {
     throw new Error('Request verification failed');
   }
 }
+// test hook
+router.get('/webhook', basicAuth, async (req, res) => {
+  try {
+    res.status(200).send('Webhook processed successfully');
+  } catch (error) {
+    console.error('Error processing webhook:', error);
+    res.status(500).send('Error processing webhook');
+  }
+});
+
 
 // Webhook endpoint with basic auth and Shopify HMAC verification
-router.post('/webhook', basicAuth, express.json({ verify: verifyShopifyRequest }), async (req, res) => {
+router.post('/webhook', basicAuth, async (req, res) => {
+  console.log("Webhook Post endpoint hit");  // Add this log
   try {
     const order = req.body;
     console.log('Received order data:', JSON.stringify(order, null, 2));
