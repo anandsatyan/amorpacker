@@ -22,46 +22,51 @@ const flexportAPI = axios.create({
 // Middleware for Basic Authentication
 const basicAuth = (req, res, next) => {
   const authHeader = req.headers.authorization || '';
-  const [username, password] = Buffer.from(authHeader.split(' ')[1] || '', 'base64').toString().split(':');
-  console.log('Basic Auth credentials received:', { username, password });
+  console.log('Authorization header:', authHeader);
+
+  if (!authHeader.startsWith('Basic ')) {
+    console.error('Authorization header missing or malformed');
+    return res.status(401).send('Unauthorized');
+  }
+
+  const [username, password] = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
+  console.log('Decoded credentials:', { username, password });
 
   if (username === AUTH_USER && password === AUTH_PASS) {
     console.log('Basic Auth successful');
     return next();
   } else {
     console.error('Basic Auth failed');
-    res.status(401).send('Unauthorized');
+    return res.status(401).send('Unauthorized');
   }
 };
 
-// Middleware to verify Shopify webhook signature
+// Middleware to verify Shopify webhook signature (only for POST requests)
 function verifyShopifyRequest(req, res, buf) {
   const hmacHeader = req.get('X-Shopify-Hmac-Sha256');
   const generatedHash = crypto
     .createHmac('sha256', SHOPIFY_API_SECRET)
     .update(buf, 'utf8', 'hex')
     .digest('base64');
+
   console.log('Shopify HMAC header:', hmacHeader);
   console.log('Generated HMAC hash:', generatedHash);
 
   if (generatedHash !== hmacHeader) {
+    console.error('Shopify HMAC verification failed');
     throw new Error('Request verification failed');
   }
 }
-// test hook
-router.get('/webhook', basicAuth, async (req, res) => {
-  try {
-    res.status(200).send('Webhook processed successfully');
-  } catch (error) {
-    console.error('Error processing webhook:', error);
-    res.status(500).send('Error processing webhook');
-  }
+
+// Test GET endpoint to verify Basic Auth without HMAC
+router.get('/webhook', basicAuth, (req, res) => {
+  console.log("GET webhook endpoint hit - Basic Auth successful");
+  res.status(200).send('GET request successful');
 });
 
-
-// Webhook endpoint with basic auth and Shopify HMAC verification
-router.post('/webhook', basicAuth, async (req, res) => {
-  console.log("Webhook Post endpoint hit");  // Add this log
+// Webhook endpoint for handling Shopify orders with Basic Auth and Shopify HMAC verification
+router.post('/webhook', basicAuth, express.json({ verify: verifyShopifyRequest }), async (req, res) => {
+  console.log("POST Webhook endpoint hit");
   try {
     const order = req.body;
     console.log('Received order data:', JSON.stringify(order, null, 2));
@@ -79,7 +84,7 @@ async function processOrder(order) {
   console.log('Processing line items:', lineItems);
 
   for (const item of lineItems) {
-    console.log('Checking line item:', item.sku);
+    console.log('Checking line item SKU:', item.sku);
     if (item.sku === 'BRC-FP-046') {
       const quantity = item.quantity;
       console.log(`Found matching SKU 'BRC-FP-046' with quantity ${quantity}`);
