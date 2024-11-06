@@ -2,9 +2,13 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const axios = require('axios');
+const SKUMap = require('../models/SKUMap'); // Import the SKUMap model
 
 // Environment variables
 const FLEXPORT_API_TOKEN = process.env.FLEXPORT_API_TOKEN;
+const SHOPIFY_WEBHOOK_SECRET = process.env.SHOPIFY_WEBHOOK_SECRET;
+const BASIC_AUTH_USERNAME = process.env.BASIC_AUTH_USERNAME;
+const BASIC_AUTH_PASSWORD = process.env.BASIC_AUTH_PASSWORD;
 
 // Axios instance for Flexport API
 const flexportAPI = axios.create({
@@ -18,21 +22,14 @@ const flexportAPI = axios.create({
 
 // Middleware for Basic Authentication
 const basicAuth = (req, res, next) => {
-  console.log('Expected BASIC_AUTH_USERNAME:', process.env.BASIC_AUTH_USERNAME);
-  console.log('Expected BASIC_AUTH_PASSWORD:', process.env.BASIC_AUTH_PASSWORD);
-
   const authHeader = req.headers.authorization || '';
-  console.log('Authorization header received:', authHeader);
-
   if (!authHeader.startsWith('Basic ')) {
     console.error('Authorization header missing or malformed');
     return res.status(401).send('Unauthorized');
   }
 
   const [username, password] = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
-  console.log('Decoded credentials:', { username, password });
-
-  if (username === process.env.BASIC_AUTH_USERNAME && password === process.env.BASIC_AUTH_PASSWORD) {
+  if (username === BASIC_AUTH_USERNAME && password === BASIC_AUTH_PASSWORD) {
     console.log('Basic Auth successful');
     return next();
   } else {
@@ -41,19 +38,13 @@ const basicAuth = (req, res, next) => {
   }
 };
 
-
 // Middleware to verify Shopify webhook signature (only for POST requests)
 function verifyShopifyRequest(req, res, buf) {
   const hmacHeader = req.get('X-Shopify-Hmac-Sha256');
-  const webhookSecret = process.env.SHOPIFY_WEBHOOK_SECRET;
-
   const generatedHash = crypto
-    .createHmac('sha256', webhookSecret)
+    .createHmac('sha256', SHOPIFY_WEBHOOK_SECRET)
     .update(buf, 'utf8', 'hex')
     .digest('base64');
-
-  console.log('Shopify HMAC header:', hmacHeader);
-  console.log('Generated HMAC hash:', generatedHash);
 
   if (generatedHash !== hmacHeader) {
     console.error('Shopify HMAC verification failed');
@@ -81,32 +72,37 @@ router.post('/webhook', basicAuth, express.json({ verify: verifyShopifyRequest }
   }
 });
 
-// Function to process the Shopify order
+// Function to process Shopify order items and map to Flexport orders
 async function processOrder(order) {
   const lineItems = order.line_items;
-  console.log('Processing line items:', lineItems);
 
   for (const item of lineItems) {
-    console.log('Checking line item SKU:', item.sku);
-    if (item.sku === 'BRC-FP-046') {
-      const quantity = item.quantity;
-      console.log(`Found matching SKU 'BRC-FP-046' with quantity ${quantity}`);
+    // Find SKU mappings for the Shopify SKU in MongoDB
+    const skuMap = await SKUMap.findOne({ shopifySKU: item.sku });
 
-      // Create orders for the two component SKUs
-      await createFlexportOrder('BRC-FP-046-1', quantity, order);
-      await createFlexportOrder('BRC-FP-046-2', quantity, order);
+    if (skuMap) {
+      console.log(`Processing components for Shopify SKU ${item.sku}`);
+      
+      // Process each component associated with the Shopify SKU
+      for (const component of skuMap.components) {
+        const flexportSKU = component.flexportSKU;
+        const quantity = item.quantity * component.quantity; // Adjust quantity based on order
+        await createFlexportOrder(flexportSKU, quantity, order, item.sku);
+      }
+    } else {
+      console.warn(`No SKU mapping found for Shopify SKU ${item.sku}`);
     }
   }
 }
 
-// Function to create an order in Flexport
-async function createFlexportOrder(skuCode, quantity, order) {
+// Function to create an order in Flexport for each component
+async function createFlexportOrder(flexportSKU, quantity, order, shopifySKU) {
   try {
     const payload = {
       data: {
         type: 'order',
         attributes: {
-          order_number: `Shopify-${order.id}-${skuCode}`, // Unique order number
+          order_number: `Shopify-${order.id}-${flexportSKU}`, // Unique order number
           destination_address: {
             name: order.shipping_address.name,
             company: order.shipping_address.company,
@@ -121,7 +117,7 @@ async function createFlexportOrder(skuCode, quantity, order) {
           },
           order_lines: [
             {
-              product_sku: skuCode,
+              product_sku: flexportSKU,
               quantity: quantity,
             },
           ],
@@ -129,11 +125,11 @@ async function createFlexportOrder(skuCode, quantity, order) {
       },
     };
 
-    console.log(`Creating Flexport order for SKU ${skuCode} with payload:`, JSON.stringify(payload, null, 2));
+    console.log(`Creating Flexport order for SKU ${flexportSKU} with payload:`, JSON.stringify(payload, null, 2));
     const response = await flexportAPI.post('/orders', payload);
-    console.log(`Flexport order created successfully for SKU ${skuCode}:`, response.data);
+    console.log(`Flexport order created successfully for Shopify SKU ${shopifySKU} component ${flexportSKU}:`, response.data);
   } catch (error) {
-    console.error(`Error creating Flexport order for SKU ${skuCode}:`, error.response?.data || error.message);
+    console.error(`Error creating Flexport order for component ${flexportSKU}:`, error.response?.data || error.message);
   }
 }
 
