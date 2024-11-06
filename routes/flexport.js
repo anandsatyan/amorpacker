@@ -11,7 +11,7 @@ const AUTH_PASS = process.env.AUTH_PASS; // Basic Auth Password
 
 // Axios instance for Flexport API
 const flexportAPI = axios.create({
-  baseURL: 'https://logistics-api.flexport.com/logistics/api/2024-07/orders',
+  baseURL: 'https://logistics-api.flexport.com/logistics/api/2024-07',
   headers: {
     Authorization: `Bearer ${FLEXPORT_API_TOKEN}`,
     'Content-Type': 'application/json',
@@ -23,10 +23,13 @@ const flexportAPI = axios.create({
 const basicAuth = (req, res, next) => {
   const authHeader = req.headers.authorization || '';
   const [username, password] = Buffer.from(authHeader.split(' ')[1] || '', 'base64').toString().split(':');
+  console.log('Basic Auth credentials received:', { username, password });
 
   if (username === AUTH_USER && password === AUTH_PASS) {
+    console.log('Basic Auth successful');
     return next();
   } else {
+    console.error('Basic Auth failed');
     res.status(401).send('Unauthorized');
   }
 };
@@ -38,6 +41,8 @@ function verifyShopifyRequest(req, res, buf) {
     .createHmac('sha256', SHOPIFY_API_SECRET)
     .update(buf, 'utf8', 'hex')
     .digest('base64');
+  console.log('Shopify HMAC header:', hmacHeader);
+  console.log('Generated HMAC hash:', generatedHash);
 
   if (generatedHash !== hmacHeader) {
     throw new Error('Request verification failed');
@@ -48,6 +53,7 @@ function verifyShopifyRequest(req, res, buf) {
 router.post('/webhook', basicAuth, express.json({ verify: verifyShopifyRequest }), async (req, res) => {
   try {
     const order = req.body;
+    console.log('Received order data:', JSON.stringify(order, null, 2));
     await processOrder(order);
     res.status(200).send('Webhook processed successfully');
   } catch (error) {
@@ -59,10 +65,13 @@ router.post('/webhook', basicAuth, express.json({ verify: verifyShopifyRequest }
 // Function to process the Shopify order
 async function processOrder(order) {
   const lineItems = order.line_items;
+  console.log('Processing line items:', lineItems);
 
   for (const item of lineItems) {
+    console.log('Checking line item:', item.sku);
     if (item.sku === 'BRC-FP-046') {
       const quantity = item.quantity;
+      console.log(`Found matching SKU 'BRC-FP-046' with quantity ${quantity}`);
 
       // Create orders for the two component SKUs
       await createFlexportOrder('BRC-FP-046-1', quantity, order);
@@ -101,8 +110,9 @@ async function createFlexportOrder(skuCode, quantity, order) {
       },
     };
 
+    console.log(`Creating Flexport order for SKU ${skuCode} with payload:`, JSON.stringify(payload, null, 2));
     const response = await flexportAPI.post('/orders', payload);
-    console.log(`Flexport order created for SKU ${skuCode}:`, response.data);
+    console.log(`Flexport order created successfully for SKU ${skuCode}:`, response.data);
   } catch (error) {
     console.error(`Error creating Flexport order for SKU ${skuCode}:`, error.response?.data || error.message);
   }
