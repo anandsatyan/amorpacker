@@ -248,10 +248,83 @@ router.get('/orders/:orderId', async (req, res) => {
                 <input type="radio" name="jobType" value="boxes" onclick="toggleForm('boxes')">
                 Boxes
             </label>
+            <label>
+                <input type="radio" name="jobType" value="trayBox" onclick="toggleForm('trayBox')">
+                Tray Box
+            </label>
             <br /><hr /><br />
+
+            <!-- Tray Box Form -->
+            <!-- Tray Box Form -->
+            <div id="trayBoxForm" class="hidden">
+                <h2>Tray Box Details</h2>
+
+                <!-- Sleeve Section --><br />
+                <h3>Sleeve Details</h3>
+                <label for="traySleeveDieNo">Sleeve Die No.</label>
+                <input type="text" id="traySleeveDieNo" name="traySleeveDieNo" value="1419">
+
+                <label for="traySleeveSubstrate">Sleeve Substrate</label>
+                <input type="text" id="traySleeveSubstrate" name="traySleeveSubstrate" value="300 GSM CYBER XL">
+
+                <label for="traySleevePrinting">Sleeve Printing</label>
+                <input type="text" id="traySleevePrinting" name="traySleevePrinting" value="Color Printing">
+
+                <label for="traySleeveLaminationOuter">Sleeve Matt Lamination Outer</label>
+                <input type="text" id="traySleeveLaminationOuter" name="traySleeveLaminationOuter" value="Thermal">
+
+                <label for="traySleeveLaminationInner">Sleeve Matt Lamination Inner</label>
+                <input type="text" id="traySleeveLaminationInner" name="traySleeveLaminationInner" value="NA">
+
+                <label for="traySleeveQty">Sleeve Qty</label>
+                <input type="number" id="traySleeveQty" name="traySleeveQty" value="110" min="1">
+                <br />
+                <!-- Tray Section -->
+                <h3>Tray Details</h3>
+                <label for="trayDieNo">Tray Die No.</label>
+                <input type="text" id="trayDieNo" name="trayDieNo" value="1419">
+
+                <label for="traySubstrate">Tray Substrate</label>
+                <input type="text" id="traySubstrate" name="traySubstrate" value="300 GSM CYBER XL">
+
+                <label for="trayPrinting">Tray Printing</label>
+                <input type="text" id="trayPrinting" name="trayPrinting" value="Color Printing">
+
+                <label for="trayLaminationOuter">Tray Matt Lamination Outer</label>
+                <input type="text" id="trayLaminationOuter" name="trayLaminationOuter" value="Thermal">
+
+                <label for="trayLaminationInner">Tray Matt Lamination Inner</label>
+                <input type="text" id="trayLaminationInner" name="trayLaminationInner" value="NA">
+
+                <label for="trayQty">Tray Qty</label>
+                <input type="number" id="trayQty" name="trayQty" value="110" min="1">
+                <br />
+                <!-- Separator/Insert Section for Tray Box -->
+                <h3>Tray Separator/Insert Details</h3>
+                <label for="trayInsertDieNo">Insert Die No.</label>
+                <input type="text" id="trayInsertDieNo" name="trayInsertDieNo" value="1419">
+
+                <label for="trayInsertSubstrate">Insert Substrate</label>
+                <input type="text" id="trayInsertSubstrate" name="trayInsertSubstrate" value="300 GSM CYBER XL">
+
+                <label for="trayInsertPrinting">Insert Printing</label>
+                <input type="text" id="trayInsertPrinting" name="trayInsertPrinting" value="Color Printing">
+
+                <label for="trayInsertLaminationOuter">Insert Matt Lamination Outer</label>
+                <input type="text" id="trayInsertLaminationOuter" name="trayInsertLaminationOuter" value="Thermal">
+
+                <label for="trayInsertLaminationInner">Insert Matt Lamination Inner</label>
+                <input type="text" id="trayInsertLaminationInner" name="trayInsertLaminationInner" value="NA">
+
+                <label for="trayInsertQty">Insert Qty</label>
+                <input type="number" id="trayInsertQty" name="trayInsertQty" value="110" min="1">
+            </div>
+
+
 
             <!-- Labels Form -->
             <div id="labelsForm">
+                <h2>Label Details</h2>
                 <label for="size">Size</label>
                 <select id="size" name="size" onchange="toggleCustomSize(this)">
                     <option value="35 x 35 mm">35 x 35 mm</option>
@@ -292,6 +365,7 @@ router.get('/orders/:orderId', async (req, res) => {
 
             <!-- Boxes Form -->
             <div id="boxesForm" class="hidden">
+                <h2>Standard Boxes</h2>
                 <label for="dieNo">Die No.</label>
                 <input type="text" id="dieNo" name="dieNo" value="New Die">
 
@@ -375,12 +449,20 @@ router.get('/orders/:orderId', async (req, res) => {
             function toggleForm(formType) {
                 var labelsForm = document.getElementById('labelsForm');
                 var boxesForm = document.getElementById('boxesForm');
+                var trayBoxForm = document.getElementById('trayBoxForm');
+
                 if (formType === 'labels') {
                     labelsForm.classList.remove('hidden');
                     boxesForm.classList.add('hidden');
-                } else {
+                    trayBoxForm.classList.add('hidden');
+                } else if (formType === 'boxes') {
                     boxesForm.classList.remove('hidden');
                     labelsForm.classList.add('hidden');
+                    trayBoxForm.classList.add('hidden');
+                } else if (formType === 'trayBox') {
+                    trayBoxForm.classList.remove('hidden');
+                    labelsForm.classList.add('hidden');
+                    boxesForm.classList.add('hidden');
                 }
             }
 
@@ -403,15 +485,26 @@ router.get('/orders/:orderId', async (req, res) => {
             document.getElementById('emailForm').onsubmit = async function(event) {
                 event.preventDefault();
                 const sendButton = document.getElementById('sendButton');
-                const boxQty = document.getElementById('qtyBox').value;
-                const insertQty = document.getElementById('insertQty').value;
+                const jobType = document.querySelector('input[name="jobType"]:checked').value;
 
-                // If quantities don't match, prompt the user for confirmation
-                if (boxQty !== insertQty) {
-                    let errMsg = 'The quantity for Boxes (' + boxQty +') does not match the quantity for Inserts (' + insertQty + '). Do you still want to proceed?'
+                // Quantities for Boxes and Tray Box
+                const boxQty = document.getElementById('qtyBox')?.value;
+                const insertQty = document.getElementById('insertQty')?.value;
+
+                const traySleeveQty = document.getElementById('traySleeveQty')?.value;
+                const trayQty = document.getElementById('trayQty')?.value;
+                const trayInsertQty = document.getElementById('trayInsertQty')?.value;
+
+                // Quantity validation
+                if (jobType === 'boxes' && boxQty !== insertQty) {
+                    let errMsg = 'The quantity for Boxes (' + boxQty + ') does not match the quantity for Inserts (' + insertQty + '). Do you still want to proceed?';
                     const confirmProceed = confirm(errMsg);
 
-                    // If user cancels, stop submission
+                    if (!confirmProceed) return;
+                } else if (jobType === 'trayBox' && (traySleeveQty !== trayQty || traySleeveQty !== trayInsertQty || trayQty !== trayInsertQty)) {
+                    let errMsg = 'The quantities for Sleeve (' + traySleeveQty + '), Tray (' + trayQty + '), and Insert (' + trayInsertQty + ') do not match. Do you still want to proceed?';
+                    const confirmProceed = confirm(errMsg);
+
                     if (!confirmProceed) return;
                 }
                 sendButton.style.display = 'none'; // Hide button
@@ -448,8 +541,33 @@ router.get('/orders/:orderId', async (req, res) => {
 // Route to send email based on form data
 router.post('/orders/:orderId/send-email', async (req, res) => {
     const { orderId } = req.params;
-    const { jobType, size, customSize, lamination, artworkLink, artworkLinkBox, jobName, dieNo, print, materialBox, laminationBox, qty, qtyBox, comments, commentsBox, addInsert, insertDieNo, insertSubstrate, insertPrinting, insertLaminationOuter, insertLaminationInner, insertQty } = req.body;
-
+    const {
+        jobType, 
+    
+        // Fields for Labels
+        size, customSize, lamination, artworkLink, qty, comments,
+    
+        // Fields for Standard Boxes
+        dieNo, print, materialBox, laminationBox, qtyBox, commentsBox, artworkLinkBox,
+    
+        // Fields for Insert within Standard Boxes
+        addInsert, insertDieNo, insertSubstrate, insertPrinting,
+        insertLaminationOuter, insertLaminationInner, insertQty,
+    
+        // Fields for Tray Box - Sleeve Section
+        traySleeveDieNo, traySleeveSubstrate, traySleevePrinting,
+        traySleeveLaminationOuter, traySleeveLaminationInner, traySleeveQty,
+    
+        // Fields for Tray Box - Tray Section
+        trayDieNo, traySubstrate, trayPrinting,
+        trayLaminationOuter, trayLaminationInner, trayQty,
+    
+        // Fields for Tray Box - Separator/Insert Section
+        trayInsertDieNo, trayInsertSubstrate, trayInsertPrinting,
+        trayInsertLaminationOuter, trayInsertLaminationInner, trayInsertQty
+    } = req.body;
+    
+    
     try {
         // Fetch the order details from Shopify
         const response = await axios.get(`${SHOPIFY_API_URL}/orders/${orderId}.json`, {
@@ -483,7 +601,7 @@ router.post('/orders/:orderId/send-email', async (req, res) => {
             htmlContent = `
                 <p>PFA the artwork & spec for print job (Boxes):<br /></p>
                 <p><strong>BOX</strong><br /></p>
-                <p><strong>Job Name:</strong> BOX-${order.name} - ${order.customer.first_name} ${order.customer.last_name}</p>
+                <p><strong>Job Name:</strong> ${order.name} - BOX - ${order.customer.first_name} ${order.customer.last_name}</p>
                 <p><strong>Die No.:</strong> ${dieNo}</p>
                 <p><strong>Print:</strong> ${print}</p>
                 <p><strong>Material:</strong> ${materialBox}</p>
@@ -507,7 +625,39 @@ router.post('/orders/:orderId/send-email', async (req, res) => {
             }
             htmlContent += `<p><strong>Comments:</strong> ${commentsBox}</p>
                 <p><strong>Artwork Link:</strong> <a href="${artworkLinkBox}" target="_blank">${artworkLinkBox}</a></p>`;
+        } else if (jobType === 'trayBox') {
+            // Email content for Tray Box, including Sleeve, Tray, and Separator/Insert sections
+            subject = `Job Name: ${order.name} - TRAYBOX - ${order.customer.first_name} ${order.customer.last_name} (Tray Box)`;
+            htmlContent = `
+                <p>PFA the artwork & spec for print job (Tray Box):</p><br />
+                <p><strong>Job Name:</strong> ${order.name} - TRAYBOX - ${order.customer.first_name} ${order.customer.last_name}</p>
+                <br /><br />
+                <h3>Sleeve Details</h3><br />
+                <p><strong>Die No.:</strong> ${traySleeveDieNo}</p>
+                <p><strong>Substrate:</strong> ${traySleeveSubstrate}</p>
+                <p><strong>Printing:</strong> ${traySleevePrinting}</p>
+                <p><strong>Matt Lamination Outer:</strong> ${traySleeveLaminationOuter}</p>
+                <p><strong>Matt Lamination Inner:</strong> ${traySleeveLaminationInner}</p>
+                <p><strong>Qty:</strong> ${traySleeveQty}</p>
+                <br />
+                <h3>Tray Details</h3><br />
+                <p><strong>Die No.:</strong> ${trayDieNo}</p>
+                <p><strong>Substrate:</strong> ${traySubstrate}</p>
+                <p><strong>Printing:</strong> ${trayPrinting}</p>
+                <p><strong>Matt Lamination Outer:</strong> ${trayLaminationOuter}</p>
+                <p><strong>Matt Lamination Inner:</strong> ${trayLaminationInner}</p>
+                <p><strong>Qty:</strong> ${trayQty}</p>
+                <br />
+                <h3>Separator/Insert Details</h3><br />
+                <p><strong>Die No.:</strong> ${trayInsertDieNo}</p>
+                <p><strong>Substrate:</strong> ${trayInsertSubstrate}</p>
+                <p><strong>Printing:</strong> ${trayInsertPrinting}</p>
+                <p><strong>Matt Lamination Outer:</strong> ${trayInsertLaminationOuter}</p>
+                <p><strong>Matt Lamination Inner:</strong> ${trayInsertLaminationInner}</p>
+                <p><strong>Qty:</strong> ${trayInsertQty}</p>
+            `;
         }
+        
 
         // Configure Nodemailer
         const transporter = nodemailer.createTransport({
