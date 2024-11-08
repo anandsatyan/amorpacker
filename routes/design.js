@@ -469,7 +469,7 @@ router.post('/orders/:orderId/send-email', async (req, res) => {
         const mailOptions = {
             from: 'info@packamor.com',
             to: 'info@packamor.com',
-            cc: ['info@brandsamor.com'], 
+            cc: ['ajit@pioprinters.com', 'info@piopackaging.com', 'info@brandsamor.com'], 
             subject: subject,
             html: htmlContent
         };
