@@ -310,7 +310,30 @@ router.get('/orders/:orderId', async (req, res) => {
                 <label for="commentsBox">Comments</label>
                 <textarea id="commentsBox" name="commentsBox" rows="4" placeholder="Add any comments"></textarea>
 
+                <label>
+                    <input type="checkbox" id="addInsert" name="addInsert" checked onchange="toggleInsertFields()">
+                    Include Insert
+                </label><br />
+                <div id="insertFields">
+                    <label for="insertDieNo">Insert Die No.</label>
+                    <input type="text" id="insertDieNo" name="insertDieNo" value="1430">
 
+                    <label for="insertSubstrate">Substrate</label>
+                    <input type="text" id="insertSubstrate" name="insertSubstrate" value="350 GSM CYBER XL">
+
+                    <label for="insertPrinting">Printing</label>
+                    <input type="text" id="insertPrinting" name="insertPrinting" value="Unprinted">
+
+                    <label for="insertLaminationOuter">Matt Lamination Outer</label>
+                    <input type="text" id="insertLaminationOuter" name="insertLaminationOuter" value="Thermal">
+
+                    <label for="insertLaminationInner">Matt Lamination Inner</label>
+                    <input type="text" id="insertLaminationInner" name="insertLaminationInner" value="NA">
+
+                    <label for="insertQty">Qty</label>
+                    <input type="number" id="insertQty" name="insertQty" value="100" readonly>
+                </div>
+                <br />
                 <label for="artworkLinkBox">Artwork Link</label>
                 <textarea id="artworkLinkBox" name="artworkLinkBox" rows="4" placeholder="Paste artwork links here"></textarea>
 
@@ -343,7 +366,7 @@ router.get('/orders/:orderId', async (req, res) => {
                     </tbody>
                 </table>
             </div>
-
+            <br />
             <button type="submit" id="sendButton">Send Email</button>
         </form>
 
@@ -371,10 +394,26 @@ router.get('/orders/:orderId', async (req, res) => {
                 }
             }
 
+            function toggleInsertFields() {
+                const insertFields = document.getElementById('insertFields');
+                insertFields.style.display = document.getElementById('addInsert').checked ? 'block' : 'none';
+            }
+
             // Form submission handler
             document.getElementById('emailForm').onsubmit = async function(event) {
                 event.preventDefault();
                 const sendButton = document.getElementById('sendButton');
+                const boxQty = document.getElementById('qtyBox').value;
+                const insertQty = document.getElementById('insertQty').value;
+
+                // If quantities don't match, prompt the user for confirmation
+                if (boxQty !== insertQty) {
+                    let errMsg = 'The quantity for Boxes (' + boxQty +') does not match the quantity for Inserts (' + insertQty + '). Do you still want to proceed?'
+                    const confirmProceed = confirm(errMsg);
+
+                    // If user cancels, stop submission
+                    if (!confirmProceed) return;
+                }
                 sendButton.style.display = 'none'; // Hide button
 
                 const formData = new FormData(this);
@@ -409,7 +448,7 @@ router.get('/orders/:orderId', async (req, res) => {
 // Route to send email based on form data
 router.post('/orders/:orderId/send-email', async (req, res) => {
     const { orderId } = req.params;
-    const { jobType, size, customSize, lamination, artworkLink, artworkLinkBox, jobName, dieNo, print, materialBox, laminationBox, qty, qtyBox, comments, commentsBox } = req.body;
+    const { jobType, size, customSize, lamination, artworkLink, artworkLinkBox, jobName, dieNo, print, materialBox, laminationBox, qty, qtyBox, comments, commentsBox, addInsert, insertDieNo, insertSubstrate, insertPrinting, insertLaminationOuter, insertLaminationInner, insertQty } = req.body;
 
     try {
         // Fetch the order details from Shopify
@@ -431,7 +470,7 @@ router.post('/orders/:orderId/send-email', async (req, res) => {
             subject = `Job Name: ${order.name} - ${order.customer.first_name} ${order.customer.last_name} (Labels)`;
             htmlContent = `
                 <p>PFA the artwork & spec for print job (Labels):</p>
-                <p><strong>Job Name:</strong> ${order.name} - ${order.customer.first_name} ${order.customer.last_name}</p>
+                <p><strong>Job Name:</strong> ${order.name} - LBL - ${order.customer.first_name} ${order.customer.last_name}</p>
                 <p><strong>Size:</strong> ${finalSize}</p>
                 <p><strong>Material:</strong> Synthetic Vinyl</p>
                 <p><strong>Lamination:</strong> ${lamination}</p>
@@ -442,16 +481,32 @@ router.post('/orders/:orderId/send-email', async (req, res) => {
         } else if (jobType === 'boxes') {
             subject = `Job Name: ${order.name} - ${order.customer.first_name} ${order.customer.last_name} (Boxes)`;
             htmlContent = `
-                <p>PFA the artwork & spec for print job (Boxes):</p>
-                <p><strong>Job Name:</strong> ${order.name} - ${order.customer.first_name} ${order.customer.last_name}</p>
+                <p>PFA the artwork & spec for print job (Boxes):<br /></p>
+                <p><strong>BOX</strong><br /></p>
+                <p><strong>Job Name:</strong> BOX-${order.name} - ${order.customer.first_name} ${order.customer.last_name}</p>
                 <p><strong>Die No.:</strong> ${dieNo}</p>
                 <p><strong>Print:</strong> ${print}</p>
                 <p><strong>Material:</strong> ${materialBox}</p>
                 <p><strong>Lamination:</strong> ${laminationBox}</p>
                 <p><strong>Qty:</strong> ${qtyBox}</p>
-                <p><strong>Comments:</strong> ${commentsBox}
-                <p><strong>Artwork Link:</strong> <a href="${artworkLinkBox}" target="_blank">${artworkLinkBox}</a></p>
+                
             `;
+
+            // Add Insert details if the checkbox is checked
+            if (addInsert) {
+                htmlContent += `
+                    <br>
+                    <p><strong>SEPARATOR/INSERT</strong><br /></p>
+                    <p><strong>Die No.:</strong> ${insertDieNo}</p>
+                    <p><strong>Substrate:</strong> ${insertSubstrate}</p>
+                    <p><strong>Printing:</strong> ${insertPrinting}</p>
+                    <p><strong>Matt Lamination Outer:</strong> ${insertLaminationOuter}</p>
+                    <p><strong>Matt Lamination Inner:</strong> ${insertLaminationInner}</p>
+                    <p><strong>Qty:</strong> ${insertQty}</p>
+                `;
+            }
+            htmlContent += `<p><strong>Comments:</strong> ${commentsBox}</p>
+                <p><strong>Artwork Link:</strong> <a href="${artworkLinkBox}" target="_blank">${artworkLinkBox}</a></p>`;
         }
 
         // Configure Nodemailer
@@ -469,7 +524,7 @@ router.post('/orders/:orderId/send-email', async (req, res) => {
         const mailOptions = {
             from: 'info@packamor.com',
             to: 'info@packamor.com',
-            cc: ['ajit@pioprinters.com', 'info@piopackaging.com', 'info@brandsamor.com'], 
+            cc: [ 'info@brandsamor.com'], 
             subject: subject,
             html: htmlContent
         };
