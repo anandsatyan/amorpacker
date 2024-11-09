@@ -368,7 +368,10 @@ router.get('/orders/:orderId', async (req, res) => {
                 <h2>Standard Boxes</h2>
                 <label for="dieNo">Die No.</label>
                 <input type="text" id="dieNo" name="dieNo" value="New Die">
-
+                <div>
+                    <label for="insertDieNo">Printing</label>
+                    <input type="text" id="print" name="print" value="Color Printing">
+                </div>
                 <div>
                     <label for="materialBox">Material</label>
                     <input type="text" id="materialBox" name="materialBox" value="350 GSM CYBER XL">
@@ -391,9 +394,6 @@ router.get('/orders/:orderId', async (req, res) => {
                 <div id="insertFields">
                     <label for="insertDieNo">Insert Die No.</label>
                     <input type="text" id="insertDieNo" name="insertDieNo" value="1430">
-
-                    <label for="insertDieNo">Printing</label>
-                    <input type="text" id="print" name="print" value="Color Printing">
 
                     <label for="insertSubstrate">Substrate</label>
                     <input type="text" id="insertSubstrate" name="insertSubstrate" value="350 GSM CYBER XL">
