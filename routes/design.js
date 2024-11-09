@@ -398,7 +398,7 @@ router.get('/orders/:orderId', async (req, res) => {
                     <label for="insertSubstrate">Substrate</label>
                     <input type="text" id="insertSubstrate" name="insertSubstrate" value="350 GSM CYBER XL">
 
-                    <label for="insertPrinting">Printing</label>
+                    <label for="insertPrinting">Insert Printing</label>
                     <input type="text" id="insertPrinting" name="insertPrinting" value="Unprinted">
 
                     <label for="insertLaminationOuter">Matt Lamination Outer</label>
