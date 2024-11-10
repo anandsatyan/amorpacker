@@ -395,19 +395,19 @@ router.get('/orders/:orderId', async (req, res) => {
                     <label for="insertDieNo">Insert Die No.</label>
                     <input type="text" id="insertDieNo" name="insertDieNo" value="1430">
 
-                    <label for="insertSubstrate">Substrate</label>
+                    <label for="insertSubstrate">Insert Substrate</label>
                     <input type="text" id="insertSubstrate" name="insertSubstrate" value="350 GSM CYBER XL">
 
                     <label for="insertPrinting">Insert Printing</label>
                     <input type="text" id="insertPrinting" name="insertPrinting" value="Unprinted">
 
-                    <label for="insertLaminationOuter">Matt Lamination Outer</label>
+                    <label for="insertLaminationOuter">Insert Matt Lamination Outer</label>
                     <input type="text" id="insertLaminationOuter" name="insertLaminationOuter" value="Thermal">
 
-                    <label for="insertLaminationInner">Matt Lamination Inner</label>
+                    <label for="insertLaminationInner">Insert Matt Lamination Inner</label>
                     <input type="text" id="insertLaminationInner" name="insertLaminationInner" value="NA">
 
-                    <label for="insertQty">Qty</label>
+                    <label for="insertQty">Insert Qty</label>
                     <input type="number" id="insertQty" name="insertQty" value="100" readonly>
                 </div>
                 <br />
@@ -677,7 +677,7 @@ router.post('/orders/:orderId/send-email', async (req, res) => {
         const mailOptions = {
             from: 'info@packamor.com',
             to: 'info@packamor.com',
-            cc: [ 'info@brandsamor.com'], 
+            cc: [ 'ajit@pioprinters.com', 'info@piopackaging.com','info@brandsamor.com'], 
             subject: subject,
             html: htmlContent
         };
