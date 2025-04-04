@@ -255,7 +255,7 @@ router.post('/create-invoice/:orderId', async (req, res) => {
                       <strong>AD Code:</strong> 0202632<br />
                       <strong>GSTIN:</strong> 33ABCFB8402A1Z8<br /><br />
                       <strong>IEC:</strong> ABCFB8402A<br />
-                      <strong>LUT:</strong> AD330524103870G<br /><br />
+                      <strong>LUT:</strong> AD330325126172L<br /><br />
                       <strong>Other reference(s):</strong> ${order.name}
                   </td>
               </tr>
@@ -349,7 +349,7 @@ router.post('/create-invoice/:orderId', async (req, res) => {
                         <strong>Bank Details:</strong> <br />
                         ACCOUNT NAME: BRANDSAMOR COMMERCE LLP<br />
                         Account NO: 35060200000552<br />
-                        IFSC CODE: BARB0RAJAKI<br />
+                        IFSC CODE: BARB0TAMBAR<br />
                         SWIFT CODE : BARBINBBTAM<br />
                         </small>
                       </td>
