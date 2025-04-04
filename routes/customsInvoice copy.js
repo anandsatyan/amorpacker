@@ -134,7 +134,7 @@ router.get('/:orderId', async (req, res) => {
                           TAMBARAM CHENNAI  600073 
                           TAMILNADU INDIA<br />
                           INFO@BRANDSAMOR.COM | +91 9840167314<br /><br />
-                          <strong>LUT:</strong> AD330524103870G | <strong>IEC:</strong> ABCFB8402A<br />
+                          <strong>LUT:</strong> AD330325126172L | <strong>IEC:</strong> ABCFB8402A<br />
                           <strong>AD Code:</strong> 202632 | <strong>GSTIN:</strong> 33ABCFB8402A1Z8<br />
                       </div>
                   </div>
