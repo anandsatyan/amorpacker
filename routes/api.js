@@ -35,15 +35,14 @@ router.post('/contact-form', async (req, res) => {
 // Send email function
 async function sendQuotationEmail(name, email, template) {
     const transporter = nodemailer.createTransport({
-            host: 'smtp.gmail.com', // Gmail SMTP host
-            port: 587, // Port for TLS
-            secure: false, // true for 465, false for other ports
+            host: process.env.SMTP_HOST,
+            port: process.env.SMTP_PORT,
+            secure: false,
             auth: {
-                user: 'info@packamor.com', // Your Gmail address
-                pass: 'oiejahfinikaqyiz' // Your Gmail password or app password
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS
             }
         });
-
 
   const mailOptions = {
     from: 'info@packamor.com',
