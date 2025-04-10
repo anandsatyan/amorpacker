@@ -35,15 +35,12 @@ router.post('/contact-form', async (req, res) => {
 // Send email function
 async function sendQuotationEmail(name, email, template) {
     const transporter = nodemailer.createTransport({
-        host: 'smtp.zoho.com', // Zoho SMTP host
-        port: 465, // Port for SSL
-        secure: true, // true for 465, false for other ports
+        service: 'gmail',
         auth: {
-            user: 'info@packamor.com', // Zoho email
-            pass: 'Packsub123packamor!' // Zoho email password
+            user: 'info@packamor.com', // Your Gmail address
+            pass: 'oiejahfinikaqyiz' // Your Gmail password or app password
         }
     });
-
 
   const mailOptions = {
     from: 'info@packamor.com',
