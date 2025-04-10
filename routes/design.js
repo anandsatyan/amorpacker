@@ -664,14 +664,15 @@ router.post('/orders/:orderId/send-email', async (req, res) => {
 
         // Configure Nodemailer
         const transporter = nodemailer.createTransport({
-            host: 'smtp.zoho.com', // Zoho SMTP host
-            port: 465, // Port for SSL
-            secure: true, // true for 465, false for other ports
+            host: 'smtp.gmail.com', // Gmail SMTP host
+            port: 587, // Port for TLS
+            secure: false, // true for 465, false for other ports
             auth: {
-                user: 'info@packamor.com', // Zoho email
-                pass: 'Packsub123packamor!' // Zoho email password
+                user: 'info@packamor.com', // Your Gmail address
+                pass: 'oiejahfinikaqyiz' // Your Gmail password or app password
             }
         });
+
 
         // Email options
         const mailOptions = {
